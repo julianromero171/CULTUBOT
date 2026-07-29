@@ -1,1 +1,5 @@
 ACTIVADO = False
+
+ESTADO = "DORMIDO"
+
+ULTIMO_LUGAR = None

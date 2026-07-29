@@ -1,22 +1,22 @@
+from core.lugares import LUGARES
 from core import estados
 
 def interpretar(texto):
 
     if "salir" in texto:
-        return "SALIR"
+        return ("SALIR", None)
 
     if "cultubot" in texto:
-
         estados.ACTIVADO = True
-        return "ACTIVAR"
+        return ("ACTIVAR", None)
 
     if not estados.ACTIVADO:
-        return "DORMIDO"
+        return ("DORMIDO", None)
 
-    if "malecon" in texto:
-        return "DIBUJAR_MALECON"
+    for lugar in LUGARES:
 
-    if "cristo rey" in texto:
-        return "DIBUJAR_CRISTOREY"
+        if lugar in texto:
 
-    return "NO_ENTIENDO"
+            return ("DIBUJAR", LUGARES[lugar])
+
+    return ("NO_ENTIENDO", None)

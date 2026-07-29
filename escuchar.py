@@ -2,6 +2,7 @@ import queue
 import json
 import sounddevice as sd
 from vosk import Model, KaldiRecognizer
+from core.acciones import ejecutar
 
 from core.normalizador import normalizar
 from core.comandos import interpretar
@@ -49,20 +50,9 @@ with sd.RawInputStream(
 
                 print("Tú dijiste:", texto)
 
-                accion = interpretar(texto)
+                accion, datos = interpretar(texto)
 
-                print("Acción:", accion)
-                if accion == "ACTIVAR":
-                    print("CultuBot: Hola, ¿en qué puedo ayudarte?")
-
-                elif accion == "DORMIDO":
-                    print("CultuBot: Primero di 'Hola CultuBot'.")
-
-                elif accion == "DIBUJAR_MALECON":
-                    print("CultuBot: Dibujaré el Malecón de Cúcuta.")
-
-                elif accion == "DIBUJAR_CRISTOREY":
-                    print("CultuBot: Dibujaré Cristo Rey.")
+                ejecutar(accion, datos)
 
                 if accion == "SALIR":
                     print("Cerrando CultuBot...")
