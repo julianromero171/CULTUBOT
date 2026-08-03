@@ -1,0 +1,41 @@
+"""
+Reproduce archivos .wav pregrabados (narraciones de cada sitio turístico).
+
+No usamos Piper ni ningún TTS: los audios ya están grabados de antemano
+(uno por lugar, ver core/lugares.py). Este módulo solo los reproduce,
+reutilizando sounddevice, que el proyecto ya usa para el micrófono.
+"""
+
+from __future__ import annotations
+
+import wave
+from pathlib import Path
+
+import numpy as np
+import sounddevice as sd
+
+_DTYPE_POR_ANCHO = {1: np.int8, 2: np.int16, 4: np.int32}
+
+
+class ReproductorAudio:
+    def reproducir(self, ruta: str | Path) -> None:
+        ruta = Path(ruta)
+
+        if not ruta.exists():
+            print(f"[Audio] Archivo no encontrado: {ruta}")
+            return
+
+        with wave.open(str(ruta), "rb") as wf:
+            frecuencia = wf.getframerate()
+            canales = wf.getnchannels()
+            ancho = wf.getsampwidth()
+            crudo = wf.readframes(wf.getnframes())
+
+        dtype = _DTYPE_POR_ANCHO.get(ancho, np.int16)
+        audio = np.frombuffer(crudo, dtype=dtype)
+        if canales > 1:
+            audio = audio.reshape(-1, canales)
+
+        sd.play(audio, samplerate=frecuencia)
+        sd.wait()  # bloquea hasta que termine; en el futuro se puede
+                   # correr en un hilo aparte si se quiere dibujar en paralelo

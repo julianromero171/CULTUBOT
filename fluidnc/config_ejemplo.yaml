@@ -1,0 +1,48 @@
+# config.yaml de FluidNC — PLANTILLA
+#
+# Este archivo NO lo usa el código Python. Se sube UNA VEZ a la ESP32
+# (por el portal web/captive portal de FluidNC) para decirle a qué pines
+# están conectados los drivers A4988, los NEMA17 y los finales de carrera.
+# Después de configurado, la comunicación en tiempo de ejecución es por
+# USB Serial (ver interface/esp32_serial.py), no por el portal web.
+#
+# Completa los pines con tu wiring real antes de subirlo. Los valores de
+# abajo son solo un ejemplo de estructura, no asumas que son correctos
+# para tu robot.
+
+name: CultuBot CNC
+board: ESP32
+
+stepping:
+  engine: RMT
+  idle_ms: 250
+  pulse_us: 4
+  dir_delay_us: 1
+
+axes:
+  x:
+    steps_per_mm: 80.0
+    max_rate_mm_per_min: 5000.0
+    acceleration_mm_per_sec2: 200.0
+    max_travel_mm: 300.0
+    motor0:
+      limit_neg_pin: gpio.34   # TODO: confirmar pin real del final de carrera X
+      hard_limits: true
+      standard_stepper:
+        step_pin: gpio.25      # TODO: confirmar pin STEP del driver X (A4988)
+        direction_pin: gpio.26 # TODO: confirmar pin DIR del driver X (A4988)
+
+  y:
+    steps_per_mm: 80.0
+    max_rate_mm_per_min: 5000.0
+    acceleration_mm_per_sec2: 200.0
+    max_travel_mm: 300.0
+    motor0:
+      limit_neg_pin: gpio.35   # TODO: confirmar pin real del final de carrera Y
+      hard_limits: true
+      standard_stepper:
+        step_pin: gpio.27      # TODO: confirmar pin STEP del driver Y (A4988)
+        direction_pin: gpio.14 # TODO: confirmar pin DIR del driver Y (A4988)
+
+# TODO: agregar pin de enable compartido de los A4988 si tu wiring lo usa
+# TODO: agregar eje Z si el proyecto lo necesita (ej. para levantar/bajar el lápiz)
