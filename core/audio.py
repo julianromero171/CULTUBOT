@@ -18,7 +18,12 @@ _DTYPE_POR_ANCHO = {1: np.int8, 2: np.int16, 4: np.int32}
 
 
 class ReproductorAudio:
-    def reproducir(self, ruta: str | Path) -> None:
+    def reproducir(self, ruta: str | Path, bloqueante: bool = True) -> None:
+        """bloqueante=False permite que el dibujo (ESP32Serial.enviar_gcode,
+        que sí bloquea) y la narración corran en paralelo: sd.play() ya
+        reproduce en un hilo propio de sounddevice, así que basta con no
+        esperar (sd.wait()) a que termine.
+        """
         ruta = Path(ruta)
 
         if not ruta.exists():
@@ -37,5 +42,5 @@ class ReproductorAudio:
             audio = audio.reshape(-1, canales)
 
         sd.play(audio, samplerate=frecuencia)
-        sd.wait()  # bloquea hasta que termine; en el futuro se puede
-                   # correr en un hilo aparte si se quiere dibujar en paralelo
+        if bloqueante:
+            sd.wait()

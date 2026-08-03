@@ -4,6 +4,50 @@ Este documento resume todo lo decidido y construido hasta ahora, para que
 puedas retomar el proyecto en Claude Code sin perder contexto de la
 conversación anterior.
 
+## Reestructuración del 2026-08-03 (sobre lo existente, sin reescribir)
+
+Se reestructuró el proyecto para que quede en estado profesional
+mientras se espera el hardware físico. No se tocó la lógica que ya
+funcionaba (máquina de estados, interpretación de comandos, protocolo
+serial send-and-wait) — solo se le agregó alrededor:
+
+- **Control de versiones:** el proyecto ahora es un repo git (antes no
+  lo era). Primer commit = snapshot del estado previo a reestructurar.
+- **Dependencias declaradas:** `requirements.txt` (runtime: vosk,
+  sounddevice, numpy, pyserial) y `requirements-dev.txt` (+ pytest).
+  Antes solo estaban mencionadas en prosa en este mismo documento.
+- **Configuración externa:** `config.py` en la raíz lee `PUERTO_ESP32`,
+  `BAUDIOS_ESP32` y `RUTA_MODELO_VOSK` de variables de entorno
+  (`CULTUBOT_PUERTO_ESP32`, etc.) con los mismos defaults de antes.
+  `main.py` ya no tiene esas constantes hardcodeadas.
+- **`ESP32Serial` ahora es testeable:** `interface/esp32_serial.py`
+  acepta un `transporte` inyectado en el constructor (para tests); si no
+  se pasa nada, se comporta exactamente igual que antes (abre un
+  `serial.Serial` real). El protocolo en sí no cambió.
+- **Suite de pruebas automatizadas (`tests/`, pytest):** cubre máquina
+  de estados, interpretación de comandos, normalizador, catálogo de
+  lugares, gramática de Vosk, el `Ejecutor` completo (con fakes de
+  voz/serial/audio), el modo no bloqueante de audio, **y el protocolo
+  real de `ESP32Serial`** (envío línea por línea, filtrado de
+  comentarios, detección de `error`, timeout) usando un transporte falso
+  en memoria — sin necesitar la ESP32 física. 43 tests, todos en verde.
+- **Audio no bloqueante:** `ReproductorAudio.reproducir()` ahora acepta
+  `bloqueante=False` para no esperar a que termine la narración (sigue
+  siendo bloqueante por defecto, para no romper el comportamiento
+  anterior). Habilita, si se quiere más adelante, correr dibujo y
+  narración en paralelo.
+- **Harness manual sin hardware:** `herramientas/simular_conversacion.py`
+  simula la conversación completa escribiendo texto (sin micrófono, sin
+  modelo Vosk, sin ESP32) — útil para probar cambios y para demos
+  rápidas mientras no hay hardware disponible.
+
+Lo que **no** cambió a propósito (para no sobre-ingenierizar): el
+proyecto sigue siendo un script que corre directo en la Raspberry Pi, no
+se convirtió en un paquete instalable; no se generó contenido real
+(gcode de los sitios, audios grabados) porque eso requiere arte/contenido
+real, no reestructuración de código; y la decisión de protocolo
+send-and-wait sigue igual, solo se hizo testeable.
+
 ## Qué es CultuBot
 
 Robot para WRO Future Engineers que interactúa por voz y dibuja sitios
@@ -81,62 +125,74 @@ Máquina de estados completa en `core/estados.py` (`Estado` enum +
 
 ```
 CULTUBOT/
-├── main.py              Composition root: arma todas las dependencias e inicia el loop.
+├── main.py               Composition root: arma todas las dependencias e inicia el loop.
+├── config.py             Configuración (puerto/baudios ESP32, ruta modelo Vosk) desde variables de entorno.
 ├── escuchar.py           Clase Escuchador: captura mic -> Vosk -> normaliza -> interpreta -> ejecuta.
-├── probar_microfono.py   Utilidad de diagnóstico de audio (sin cambios).
+├── requirements.txt      Dependencias de runtime (vosk, sounddevice, numpy, pyserial).
+├── requirements-dev.txt  requirements.txt + pytest.
+├── conftest.py           Vacío; hace que pytest agregue la raíz al sys.path.
+├── .gitignore            venv/, models/, __pycache__/, *.pyc, .pytest_cache/.
 ├── core/
 │   ├── estados.py         Enum Estado + clase MaquinaEstados (máquina de estados real y validada).
 │   ├── comandos.py        Interpreta texto -> Accion/Opcion. Puro, no muta estado.
 │   ├── acciones.py         Ejecutor: aplica transiciones + dispara efectos (voz, serial, audio).
 │   ├── lugares.py           Catálogo de sitios turísticos (Lugar dataclass).
 │   ├── normalizador.py      Corrige errores típicos de STT antes de interpretar.
-│   ├── audio.py             ReproductorAudio: reproduce los .wav con sounddevice. REAL, no stub.
+│   ├── audio.py             ReproductorAudio: reproduce los .wav con sounddevice (bloqueante o no). REAL, no stub.
 │   └── vocabulario.py       Gramática restringida para Vosk (mejora precisión).
 ├── interface/
-│   └── esp32_serial.py      ESP32Serial: streaming real de gcode por USB. REAL, no stub.
+│   └── esp32_serial.py      ESP32Serial: streaming real de gcode por USB, transporte inyectable para tests. REAL, no stub.
+├── tests/                   Suite pytest: estados, comandos, normalizador, lugares, vocabulario, acciones, audio, esp32_serial (con transporte falso).
+├── herramientas/
+│   └── simular_conversacion.py  Simula la conversación completa por texto, sin mic/Vosk/ESP32.
 ├── drawings/                Archivos .gcode por sitio (drawings/malecon.gcode, etc.). FALTAN LOS REALES.
 ├── audio/                   Archivos .wav por sitio (audio/malecon.wav, etc.). FALTAN LOS REALES.
 ├── fluidnc/                 Config de referencia de FluidNC (config_ejemplo.yaml). Se sube UNA VEZ al ESP32.
-├── models/                  Modelo Vosk (vosk-model-small-es-0.42). Ya lo tenían.
-└── venv/                    Entorno virtual, sin cambios.
+├── models/                  Modelo Vosk (vosk-model-small-es-0.42). Se descarga aparte, no versionado.
+└── venv/                    Entorno virtual, no versionado.
 ```
 
 ## Qué es real y qué es stub/pendiente
 
-**Ya funciona de verdad, probado en este sandbox sin hardware:**
-- Máquina de estados, interpretación de comandos, normalizador, catálogo de lugares.
-- `ReproductorAudio` (reproduce audio real si el `.wav` existe).
-- `ESP32Serial.enviar_gcode()` (implementación real del protocolo, no probada con hardware físico todavía porque no hay ESP32 disponible ahora mismo).
+**Ya funciona de verdad, cubierto por la suite automatizada (`pytest`, 43 tests) sin hardware:**
+- Máquina de estados, interpretación de comandos, normalizador, catálogo de lugares, gramática de Vosk.
+- `Ejecutor` completo (los 3 flujos de confirmación + caso de error al enviar gcode).
+- `ReproductorAudio` (reproduce audio real si el `.wav` existe; modo bloqueante y no bloqueante).
+- `ESP32Serial.enviar_gcode()` — protocolo real probado con un transporte falso en memoria (envío línea por línea, filtrado de comentarios, `error`, timeout). Sigue sin probarse contra la ESP32 física porque no hay hardware disponible ahora mismo.
 - Fallback automático: si `main.py` no logra conectar con la ESP32, cae solo a `SerialConsola` (modo simulado) sin crashear, para poder seguir probando el resto del sistema sin hardware.
+- `herramientas/simular_conversacion.py` permite probar el flujo conversacional completo escribiendo texto, sin mic/Vosk/ESP32.
 
-**Pendiente / requiere hardware o contenido:**
+**Pendiente / requiere hardware o contenido (nada de esto cambió con la reestructuración):**
 1. **Probar `ESP32Serial` con la ESP32 física real** — no se ha podido validar el streaming de gcode contra FluidNC de verdad (sin hardware disponible en este momento). Es la prioridad #1 en cuanto haya acceso al hardware.
 2. Completar `fluidnc/config_ejemplo.yaml` con los pines reales (steps_per_mm, STEP/DIR de cada A4988, límites) y subirlo al ESP32.
-3. Confirmar el puerto Serial real en la Raspberry (`ls /dev/tty*` con la ESP32 conectada) y actualizar `PUERTO_ESP32` en `main.py` (ahora mismo asume `/dev/ttyUSB0`).
+3. Confirmar el puerto Serial real en la Raspberry (`ls /dev/tty*` con la ESP32 conectada) y setear `CULTUBOT_PUERTO_ESP32` (ver `config.py`; ya no hace falta editar código).
 4. Generar los `.gcode` reales de cada sitio turístico (hoy solo existe `drawings/prueba_cuadrado.gcode` de prueba).
 5. Grabar y colocar los `.wav` reales en `audio/`.
-6. Validar en la Raspberry Pi 5 real que `pip install vosk sounddevice pyserial numpy` funciona y que PortAudio está instalado (`sudo apt install portaudio19-dev` si hace falta).
+6. Validar en la Raspberry Pi 5 real que `pip install -r requirements.txt` funciona y que PortAudio está instalado (`sudo apt install portaudio19-dev` si hace falta).
 
 ## Limitaciones conocidas / mejoras futuras (no bloqueantes)
 
-- `ReproductorAudio.reproducir()` es **bloqueante** (`sd.wait()`): si se
-  quiere que el dibujo y la narración corran en paralelo de verdad (no
-  solo uno después del otro), hay que moverlo a un hilo aparte.
 - `ESP32Serial.enviar_gcode()` usa streaming simple "send-and-wait" (una
   línea, espera `ok`, siguiente línea). Es confiable pero no el método
   más rápido posible; si el dibujo resulta muy lento en la práctica, se
   puede migrar a streaming con buffer (character counting), pero probar
   primero si hace falta.
-- El archivo `prueba` en la raíz del proyecto no se identificó — revisar
-  si sigue siendo necesario.
+- El modo no bloqueante de `ReproductorAudio` está disponible
+  (`reproducir(..., bloqueante=False)`) pero `Ejecutor` (`core/acciones.py`)
+  todavía llama todo de forma secuencial — dibujo y narración no corren
+  en paralelo automáticamente todavía; sería el siguiente paso si se
+  necesita en la práctica.
 
 ## Sugerencia de por dónde seguir en Claude Code
 
 1. Con la ESP32 física disponible: probar `interface/esp32_serial.py`
-   contra hardware real usando `drawings/prueba_cuadrado.gcode`.
+   contra hardware real usando `drawings/prueba_cuadrado.gcode` (correr
+   `main.py` con `CULTUBOT_PUERTO_ESP32` apuntando al puerto real).
 2. Si el streaming falla o se comporta raro, revisar baudrate, timeout,
    y si FluidNC espera un handshake distinto al asumido aquí (confirmar
    contra la documentación de FluidNC de la versión que estén usando).
-3. Después, generar los gcode reales de los sitios turísticos y probar
-   dibujos completos.
-4. Opcional: audio no bloqueante (hilo aparte) para dibujo+narración en paralelo.
+3. Mientras tanto (sin hardware): generar los gcode reales de los sitios
+   turísticos y probarlos con `herramientas/simular_conversacion.py` +
+   `pytest`.
+4. Opcional: usar `reproducir(..., bloqueante=False)` en `core/acciones.py`
+   para que dibujo y narración corran en paralelo de verdad.

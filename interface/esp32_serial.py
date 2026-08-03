@@ -31,13 +31,23 @@ class ESP32Serial:
         puerto: str = "/dev/ttyUSB0",
         baudios: int = 115200,
         timeout_segundos: float = 5.0,
+        transporte: serial.Serial | None = None,
     ) -> None:
+        """transporte: para tests, se puede inyectar un objeto compatible con
+        la interfaz de serial.Serial (write/readline/reset_input_buffer/is_open)
+        en vez de abrir un puerto real. Si se pasa, conectar() lo usa tal cual
+        y no crea una conexión serial de verdad.
+        """
         self._puerto = puerto
         self._baudios = baudios
         self._timeout = timeout_segundos
-        self._conexion: serial.Serial | None = None
+        self._conexion: serial.Serial | None = transporte
+        self._transporte_inyectado = transporte is not None
 
     def conectar(self) -> None:
+        if self._transporte_inyectado:
+            return
+
         try:
             self._conexion = serial.Serial(
                 self._puerto, self._baudios, timeout=self._timeout
