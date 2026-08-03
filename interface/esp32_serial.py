@@ -25,6 +25,20 @@ class ErrorConexionESP32(Exception):
     """No se pudo abrir el puerto serial hacia la ESP32."""
 
 
+def es_linea_util(linea: str) -> bool:
+    """Una línea de gcode es "útil" si no está vacía y no es un comentario
+    (';' o '(' de línea completa). Función libre (no método) para que
+    herramientas como validar_gcode.py puedan reusar el mismo filtro que
+    usa el envío real, sin depender de una conexión serial.
+    """
+    linea = linea.strip()
+    if not linea:
+        return False
+    if linea.startswith(";") or linea.startswith("("):
+        return False
+    return True
+
+
 class ESP32Serial:
     def __init__(
         self,
@@ -66,14 +80,6 @@ class ESP32Serial:
     def esta_conectado(self) -> bool:
         return self._conexion is not None and self._conexion.is_open
 
-    def _linea_es_util(self, linea: str) -> bool:
-        linea = linea.strip()
-        if not linea:
-            return False
-        if linea.startswith(";") or linea.startswith("("):
-            return False  # comentarios de gcode
-        return True
-
     def enviar_gcode(self, ruta_archivo: str | Path) -> bool:
         """Envía un archivo .gcode/.txt línea por línea.
 
@@ -95,7 +101,7 @@ class ESP32Serial:
         lineas = [
             linea.strip()
             for linea in ruta.read_text(encoding="utf-8").splitlines()
-            if self._linea_es_util(linea)
+            if es_linea_util(linea)
         ]
         total = len(lineas)
 

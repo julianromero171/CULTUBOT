@@ -33,23 +33,35 @@ class Lugar:
 
 # Fuente única de verdad: agregar un sitio nuevo solo requiere una línea aquí.
 LUGARES: dict[str, Lugar] = {
-    "malecon": Lugar(
-        clave="malecon",
-        nombre="Malecón de Cúcuta",
-        archivo_gcode="malecon.gcode",
-        archivo_audio="malecon.wav",
-    ),
-    "cristo rey": Lugar(
-        clave="cristo rey",
-        nombre="Cristo Rey",
-        archivo_gcode="cristo_rey.gcode",
-        archivo_audio="cristo_rey.wav",
-    ),
     "biblioteca": Lugar(
         clave="biblioteca",
         nombre="Biblioteca Pública",
         archivo_gcode="biblioteca.gcode",
         archivo_audio="biblioteca.wav",
+    ),
+    "cerro de tasajero": Lugar(
+        clave="cerro de tasajero",
+        nombre="Cerro del Tasajero",
+        archivo_gcode="cerro_tasajero.gcode",
+        archivo_audio="cerro_tasajero.wav",
+    ),
+    "locomotora": Lugar(
+        clave="locomotora",
+        nombre="La Locomotora",
+        archivo_gcode="locomotora.gcode",
+        archivo_audio="locomotora.wav",
+    ),
+    "casa de santander": Lugar(
+        clave="casa de santander",
+        nombre="Casa de Santander",
+        archivo_gcode="casa_santander.gcode",
+        archivo_audio="casa_santander.wav",
+    ),
+    "cafe": Lugar(
+        clave="cafe",
+        nombre="Café",
+        archivo_gcode="cafe.gcode",
+        archivo_audio="cafe.wav",
     ),
 }
 

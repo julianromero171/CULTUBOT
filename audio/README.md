@@ -6,9 +6,11 @@ Piper ni ningún TTS: estos audios ya vienen grabados de antemano.
 El nombre de archivo debe coincidir exactamente con `archivo_audio` en
 `core/lugares.py`:
 
-- `malecon.wav`
-- `cristo_rey.wav`
 - `biblioteca.wav`
+- `cerro_tasajero.wav`
+- `locomotora.wav`
+- `casa_santander.wav`
+- `cafe.wav`
 
 Si agregas un lugar nuevo en `core/lugares.py`, agrega aquí su `.wav`
 correspondiente con el mismo nombre.

@@ -54,7 +54,7 @@ def test_preguntar_opcion_pasa_a_confirmando_y_guarda_lugar():
     ejecutor, voz, _, _ = _construir()
     maquina = MaquinaEstados()
     maquina.transicionar(Estado.ESPERANDO_ORDEN)
-    lugar = LUGARES["malecon"]
+    lugar = LUGARES["biblioteca"]
 
     ejecutor.ejecutar(Resultado(Accion.PREGUNTAR_OPCION, lugar=lugar), maquina)
 
@@ -67,7 +67,7 @@ def test_confirmar_dibujo_envia_gcode_y_vuelve_a_esperando_orden():
     ejecutor, voz, serial, audio = _construir()
     maquina = MaquinaEstados()
     maquina.transicionar(Estado.ESPERANDO_ORDEN)
-    lugar = LUGARES["malecon"]
+    lugar = LUGARES["biblioteca"]
     maquina.establecer_lugar(lugar)
     maquina.transicionar(Estado.CONFIRMANDO)
 
@@ -84,7 +84,7 @@ def test_confirmar_dibujo_con_audio_envia_ambos():
     ejecutor, voz, serial, audio = _construir()
     maquina = MaquinaEstados()
     maquina.transicionar(Estado.ESPERANDO_ORDEN)
-    lugar = LUGARES["malecon"]
+    lugar = LUGARES["biblioteca"]
     maquina.establecer_lugar(lugar)
     maquina.transicionar(Estado.CONFIRMANDO)
 
@@ -102,7 +102,7 @@ def test_confirmar_solo_audio_no_toca_el_serial():
     ejecutor, voz, serial, audio = _construir()
     maquina = MaquinaEstados()
     maquina.transicionar(Estado.ESPERANDO_ORDEN)
-    lugar = LUGARES["malecon"]
+    lugar = LUGARES["biblioteca"]
     maquina.establecer_lugar(lugar)
     maquina.transicionar(Estado.CONFIRMANDO)
 
@@ -119,7 +119,7 @@ def test_confirmar_avisa_si_falla_el_envio_de_gcode():
     ejecutor, voz, serial, _ = _construir(exito_serial=False)
     maquina = MaquinaEstados()
     maquina.transicionar(Estado.ESPERANDO_ORDEN)
-    lugar = LUGARES["malecon"]
+    lugar = LUGARES["biblioteca"]
     maquina.establecer_lugar(lugar)
     maquina.transicionar(Estado.CONFIRMANDO)
 

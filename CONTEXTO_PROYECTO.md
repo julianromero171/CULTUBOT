@@ -105,13 +105,13 @@ espacio de búsqueda — la técnica correcta para este caso de uso.
 Usuario: "Cultubot"
 Robot:   "Hola, ¿en qué puedo ayudarte?"          [DORMIDO -> ESPERANDO_ORDEN]
 
-Usuario: "Dibuja el malecón"
-Robot:   "Encontré Malecón de Cúcuta. ¿Quieres el dibujo,
+Usuario: "Dibuja la biblioteca"
+Robot:   "Encontré Biblioteca Pública. ¿Quieres el dibujo,
           dibujo con audio, o solo audio?"         [-> CONFIRMANDO]
 
 Usuario: "Dibujo con audio"
 Robot:   "Preparando el dibujo..." -> envía gcode por Serial
-Robot:   "Este es el Malecón de Cúcuta." -> reproduce audio/malecon.wav
+Robot:   "Este es Biblioteca Pública." -> reproduce audio/biblioteca.wav
                                                     [-> DIBUJANDO -> NARRANDO -> FINALIZADO -> ESPERANDO_ORDEN]
 
 Usuario: "Salir"
@@ -145,8 +145,8 @@ CULTUBOT/
 ├── tests/                   Suite pytest: estados, comandos, normalizador, lugares, vocabulario, acciones, audio, esp32_serial (con transporte falso).
 ├── herramientas/
 │   └── simular_conversacion.py  Simula la conversación completa por texto, sin mic/Vosk/ESP32.
-├── drawings/                Archivos .gcode por sitio (drawings/malecon.gcode, etc.). FALTAN LOS REALES.
-├── audio/                   Archivos .wav por sitio (audio/malecon.wav, etc.). FALTAN LOS REALES.
+├── drawings/                Archivos .gcode por sitio (biblioteca, cerro_tasajero, locomotora, casa_santander, cafe). Ya generados por el usuario, pendientes de copiar aquí.
+├── audio/                   Archivos .wav por sitio (mismos 5 nombres que drawings/). FALTAN LOS REALES.
 ├── fluidnc/                 Config de referencia de FluidNC (config_ejemplo.yaml). Se sube UNA VEZ al ESP32.
 ├── models/                  Modelo Vosk (vosk-model-small-es-0.42). Se descarga aparte, no versionado.
 └── venv/                    Entorno virtual, no versionado.
@@ -161,13 +161,14 @@ CULTUBOT/
 - `ESP32Serial.enviar_gcode()` — protocolo real probado con un transporte falso en memoria (envío línea por línea, filtrado de comentarios, `error`, timeout). Sigue sin probarse contra la ESP32 física porque no hay hardware disponible ahora mismo.
 - Fallback automático: si `main.py` no logra conectar con la ESP32, cae solo a `SerialConsola` (modo simulado) sin crashear, para poder seguir probando el resto del sistema sin hardware.
 - `herramientas/simular_conversacion.py` permite probar el flujo conversacional completo escribiendo texto, sin mic/Vosk/ESP32.
+- `herramientas/validar_gcode.py` revisa `drawings/` contra el catálogo real (`core/lugares.py`) y avisa qué archivos faltan o tienen señales de alerta (sin G21/G90, paréntesis desbalanceados, etc.), sin necesitar la ESP32.
 
 **Pendiente / requiere hardware o contenido (nada de esto cambió con la reestructuración):**
 1. **Probar `ESP32Serial` con la ESP32 física real** — no se ha podido validar el streaming de gcode contra FluidNC de verdad (sin hardware disponible en este momento). Es la prioridad #1 en cuanto haya acceso al hardware.
 2. Completar `fluidnc/config_ejemplo.yaml` con los pines reales (steps_per_mm, STEP/DIR de cada A4988, límites) y subirlo al ESP32.
 3. Confirmar el puerto Serial real en la Raspberry (`ls /dev/tty*` con la ESP32 conectada) y setear `CULTUBOT_PUERTO_ESP32` (ver `config.py`; ya no hace falta editar código).
-4. Generar los `.gcode` reales de cada sitio turístico (hoy solo existe `drawings/prueba_cuadrado.gcode` de prueba).
-5. Grabar y colocar los `.wav` reales en `audio/`.
+4. **Copiar los `.gcode` reales a `drawings/`** — ya están generados (en otra computadora), pendiente pasarlos a este proyecto con los nombres exactos del catálogo (`biblioteca.gcode`, `cerro_tasajero.gcode`, `locomotora.gcode`, `casa_santander.gcode`, `cafe.gcode`). Usar `python herramientas/validar_gcode.py` apenas se copien, para revisarlos sin necesitar la ESP32.
+5. Grabar y colocar los `.wav` reales en `audio/` (mismos 5 nombres, extensión `.wav`).
 6. Validar en la Raspberry Pi 5 real que `pip install -r requirements.txt` funciona y que PortAudio está instalado (`sudo apt install portaudio19-dev` si hace falta).
 
 ## Limitaciones conocidas / mejoras futuras (no bloqueantes)

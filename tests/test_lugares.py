@@ -1,10 +1,10 @@
 from core.lugares import LUGARES, buscar_lugar
 
 
-def test_buscar_lugar_encuentra_malecon():
-    lugar = buscar_lugar("quiero ver el malecon")
+def test_buscar_lugar_encuentra_biblioteca():
+    lugar = buscar_lugar("quiero ver la biblioteca")
     assert lugar is not None
-    assert lugar.clave == "malecon"
+    assert lugar.clave == "biblioteca"
 
 
 def test_buscar_lugar_no_encuentra_nada():

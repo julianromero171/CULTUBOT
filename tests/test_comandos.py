@@ -16,17 +16,17 @@ def test_activar_desde_dormido():
 
 def test_ignora_si_esta_dormido_y_no_dice_activacion():
     maquina = MaquinaEstados()
-    resultado = interpretar("dibuja el malecon", maquina)
+    resultado = interpretar("dibuja la biblioteca", maquina)
     assert resultado.accion is Accion.IGNORAR
 
 
 def test_reconoce_lugar_estando_activo():
     maquina = MaquinaEstados()
     maquina.transicionar(Estado.ESPERANDO_ORDEN)
-    resultado = interpretar("dibuja el malecon", maquina)
+    resultado = interpretar("dibuja la biblioteca", maquina)
     assert resultado.accion is Accion.PREGUNTAR_OPCION
     assert resultado.lugar is not None
-    assert resultado.lugar.clave == "malecon"
+    assert resultado.lugar.clave == "biblioteca"
 
 
 def test_no_entiende_si_no_reconoce_lugar():
