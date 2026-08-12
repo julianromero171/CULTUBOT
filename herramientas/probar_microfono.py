@@ -35,7 +35,6 @@ from vosk import KaldiRecognizer, Model
 
 import config
 
-MUESTREO_HZ = 16000
 BLOQUE = 8000
 
 
@@ -71,10 +70,18 @@ def main() -> None:
     args = parser.parse_args()
 
     indice_mic = _buscar_dispositivo_entrada(args.dispositivo)
-    print(f"Usando micrófono: [{indice_mic}] {sd.query_devices(indice_mic)['name']}")
+    info_mic = sd.query_devices(indice_mic)
+    print(f"Usando micrófono: [{indice_mic}] {info_mic['name']}")
+
+    # Muchos micrófonos USB baratos no soportan 16000 Hz de forma nativa
+    # (solo 44100/48000). Se usa la tasa que el propio dispositivo reporta
+    # como default en vez de forzar 16000, para no chocar con
+    # PortAudioError: Invalid sample rate.
+    muestreo_hz = int(info_mic["default_samplerate"])
+    print(f"Tasa de muestreo del dispositivo: {muestreo_hz} Hz")
 
     modelo = Model(config.RUTA_MODELO_VOSK)
-    reconocedor = KaldiRecognizer(modelo, MUESTREO_HZ)  # sin gramática: reconocimiento libre
+    reconocedor = KaldiRecognizer(modelo, muestreo_hz)  # sin gramática: reconocimiento libre
 
     cola: queue.Queue[bytes] = queue.Queue()
 
@@ -88,7 +95,7 @@ def main() -> None:
     print("=" * 50)
 
     with sd.RawInputStream(
-        samplerate=MUESTREO_HZ,
+        samplerate=muestreo_hz,
         blocksize=BLOQUE,
         dtype="int16",
         channels=1,
