@@ -39,7 +39,7 @@ def construir_escuchador() -> Escuchador:
     serial = construir_serial()
     audio = ReproductorAudio()
     ejecutor = Ejecutor(voz=voz, serial=serial, audio=audio)
-    return Escuchador(config.RUTA_MODELO_VOSK, maquina, ejecutor)
+    return Escuchador(config.RUTA_MODELO_VOSK, maquina, ejecutor, config.DISPOSITIVO_MIC)
 
 
 def main() -> None:

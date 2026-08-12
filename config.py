@@ -22,3 +22,7 @@ RUTA_MODELO_VOSK = os.environ.get(
 PUERTO_ESP32 = os.environ.get("CULTUBOT_PUERTO_ESP32", "/dev/ttyUSB0")
 
 BAUDIOS_ESP32 = int(os.environ.get("CULTUBOT_BAUDIOS_ESP32", "115200"))
+
+# Substring del nombre del micrófono a usar (ver core.audio.buscar_dispositivo_entrada).
+# Sirve para no depender del índice de ALSA, que puede cambiar entre reinicios.
+DISPOSITIVO_MIC = os.environ.get("CULTUBOT_DISPOSITIVO_MIC", "USB")

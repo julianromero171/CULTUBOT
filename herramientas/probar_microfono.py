@@ -34,28 +34,9 @@ import sounddevice as sd
 from vosk import KaldiRecognizer, Model
 
 import config
+from core.audio import buscar_dispositivo_entrada
 
 BLOQUE = 8000
-
-
-def _buscar_dispositivo_entrada(coincidencia: str) -> int:
-    """Índice del primer dispositivo de ENTRADA cuyo nombre contiene
-    `coincidencia` (sin distinguir mayúsculas). Si no hay coincidencia,
-    imprime la lista completa de entradas disponibles y termina.
-    """
-    dispositivos = sd.query_devices()
-    coincidencia = coincidencia.lower()
-
-    for indice, dispositivo in enumerate(dispositivos):
-        if dispositivo["max_input_channels"] > 0 and coincidencia in dispositivo["name"].lower():
-            return indice
-
-    print(f'No se encontró ningún micrófono cuyo nombre contenga "{coincidencia}".')
-    print("Dispositivos de entrada disponibles:")
-    for indice, dispositivo in enumerate(dispositivos):
-        if dispositivo["max_input_channels"] > 0:
-            print(f"  [{indice}] {dispositivo['name']}")
-    raise SystemExit(1)
 
 
 def main() -> None:
@@ -69,7 +50,7 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    indice_mic = _buscar_dispositivo_entrada(args.dispositivo)
+    indice_mic = buscar_dispositivo_entrada(args.dispositivo)
     info_mic = sd.query_devices(indice_mic)
     print(f"Usando micrófono: [{indice_mic}] {info_mic['name']}")
 
