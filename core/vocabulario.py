@@ -21,7 +21,12 @@ import json
 
 from core.lugares import LUGARES
 
-PALABRAS_ACTIVACION = ["cultubot", "hola cultubot"]
+# "cultubot" NO está en el diccionario del modelo de Vosk (es un nombre
+# inventado) y la gramática restringida descarta silenciosamente
+# cualquier palabra que no exista ahí — quedaba sin forma de activarse.
+# "cultura" y "culto" sí existen (confirmado contra el modelo real) y
+# core/normalizador.py ya las convierte a "cultubot" antes de interpretar.
+PALABRAS_ACTIVACION = ["cultura", "culto"]
 PALABRAS_SALIR = ["salir"]
 PALABRAS_OPCION = [
     "dibujo",

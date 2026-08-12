@@ -16,6 +16,10 @@ def test_gramatica_incluye_unk():
 
 
 def test_gramatica_incluye_activacion_y_salir():
+    # "cultubot" no está en el diccionario del modelo de Vosk (nombre
+    # inventado); la gramática usa "cultura"/"culto", que sí existen, y
+    # core/normalizador.py las convierte a "cultubot" antes de interpretar.
     frases = json.loads(construir_gramatica())
-    assert "cultubot" in frases
+    assert "cultura" in frases
+    assert "culto" in frases
     assert "salir" in frases
