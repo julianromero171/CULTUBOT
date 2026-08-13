@@ -9,7 +9,7 @@ El nombre de archivo debe coincidir exactamente con `archivo_audio` en
 - `biblioteca.wav`
 - `cerro_tasajero.wav`
 - `locomotora.wav`
-- `casa_santander.wav`
+- `templo_historico.wav`
 - `cafe.wav`
 
 Si agregas un lugar nuevo en `core/lugares.py`, agrega aquí su `.wav`

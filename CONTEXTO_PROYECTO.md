@@ -145,7 +145,7 @@ CULTUBOT/
 ├── tests/                   Suite pytest: estados, comandos, normalizador, lugares, vocabulario, acciones, audio, esp32_serial (con transporte falso).
 ├── herramientas/
 │   └── simular_conversacion.py  Simula la conversación completa por texto, sin mic/Vosk/ESP32.
-├── drawings/                Archivos .gcode por sitio (biblioteca, cerro_tasajero, locomotora, casa_santander, cafe). Ya generados por el usuario, pendientes de copiar aquí.
+├── drawings/                Archivos .gcode por sitio (biblioteca, cerro_tasajero, templo_historico, locomotora, cafe). Ya generados por el usuario, pendientes de copiar aquí.
 ├── audio/                   Archivos .wav por sitio (mismos 5 nombres que drawings/). FALTAN LOS REALES.
 ├── fluidnc/                 Config de referencia de FluidNC (config_ejemplo.yaml). Se sube UNA VEZ al ESP32.
 ├── models/                  Modelo Vosk (vosk-model-small-es-0.42). Se descarga aparte, no versionado.
@@ -167,7 +167,7 @@ CULTUBOT/
 1. **Probar `ESP32Serial` con la ESP32 física real** — no se ha podido validar el streaming de gcode contra FluidNC de verdad (sin hardware disponible en este momento). Es la prioridad #1 en cuanto haya acceso al hardware.
 2. Completar `fluidnc/config_ejemplo.yaml` con los pines reales (steps_per_mm, STEP/DIR de cada A4988, límites) y subirlo al ESP32.
 3. Confirmar el puerto Serial real en la Raspberry (`ls /dev/tty*` con la ESP32 conectada) y setear `CULTUBOT_PUERTO_ESP32` (ver `config.py`; ya no hace falta editar código).
-4. **Copiar los `.gcode` reales a `drawings/`** — ya están generados (en otra computadora), pendiente pasarlos a este proyecto con los nombres exactos del catálogo (`biblioteca.gcode`, `cerro_tasajero.gcode`, `locomotora.gcode`, `casa_santander.gcode`, `cafe.gcode`). Usar `python herramientas/validar_gcode.py` apenas se copien, para revisarlos sin necesitar la ESP32.
+4. **Copiar los `.gcode` reales a `drawings/`** — ya están generados (en otra computadora), pendiente pasarlos a este proyecto con los nombres exactos del catálogo (`biblioteca.gcode`, `cerro_tasajero.gcode`, `templo_historico.gcode`, `locomotora.gcode`, `cafe.gcode`). Usar `python herramientas/validar_gcode.py` apenas se copien, para revisarlos sin necesitar la ESP32.
 5. Grabar y colocar los `.wav` reales en `audio/` (mismos 5 nombres, extensión `.wav`).
 6. Validar en la Raspberry Pi 5 real que `pip install -r requirements.txt` funciona y que PortAudio está instalado (`sudo apt install portaudio19-dev` si hace falta).
 

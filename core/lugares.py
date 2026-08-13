@@ -51,11 +51,11 @@ LUGARES: dict[str, Lugar] = {
         archivo_gcode="locomotora.gcode",
         archivo_audio="locomotora.wav",
     ),
-    "casa de santander": Lugar(
-        clave="casa de santander",
-        nombre="Casa de Santander",
-        archivo_gcode="casa_santander.gcode",
-        archivo_audio="casa_santander.wav",
+    "templo historico": Lugar(
+        clave="templo historico",
+        nombre="Templo Histórico",
+        archivo_gcode="templo_historico.gcode",
+        archivo_audio="templo_historico.wav",
     ),
     "cafe": Lugar(
         clave="cafe",
