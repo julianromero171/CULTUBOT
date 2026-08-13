@@ -26,3 +26,6 @@ BAUDIOS_ESP32 = int(os.environ.get("CULTUBOT_BAUDIOS_ESP32", "115200"))
 # Substring del nombre del micrófono a usar (ver core.audio.buscar_dispositivo_entrada).
 # Sirve para no depender del índice de ALSA, que puede cambiar entre reinicios.
 DISPOSITIVO_MIC = os.environ.get("CULTUBOT_DISPOSITIVO_MIC", "USB")
+
+# Substring del nombre del bafle a usar (ver core.audio.buscar_dispositivo_salida).
+DISPOSITIVO_BAFLE = os.environ.get("CULTUBOT_DISPOSITIVO_BAFLE", "UAC")

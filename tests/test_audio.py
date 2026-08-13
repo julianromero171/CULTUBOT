@@ -3,12 +3,12 @@ import wave
 import pytest
 
 from core import audio as audio_mod
-from core.audio import ReproductorAudio, buscar_dispositivo_entrada
+from core.audio import ReproductorAudio, buscar_dispositivo_entrada, buscar_dispositivo_salida
 
 _DISPOSITIVOS_DE_PRUEBA = [
-    {"name": "Salida HDMI", "max_input_channels": 0},
-    {"name": "USB PnP Sound Device: Audio (hw:1,0)", "max_input_channels": 1},
-    {"name": "UACDemoV10: USB Audio (hw:2,0)", "max_input_channels": 0},
+    {"name": "Salida HDMI", "max_input_channels": 0, "max_output_channels": 2},
+    {"name": "USB PnP Sound Device: Audio (hw:1,0)", "max_input_channels": 1, "max_output_channels": 0},
+    {"name": "UACDemoV10: USB Audio (hw:2,0)", "max_input_channels": 0, "max_output_channels": 2},
 ]
 
 
@@ -24,6 +24,7 @@ def _crear_wav_de_prueba(tmp_path):
 
 def test_modo_bloqueante_por_defecto_espera(tmp_path, monkeypatch):
     llamadas = []
+    monkeypatch.setattr(audio_mod.sd, "query_devices", lambda: _DISPOSITIVOS_DE_PRUEBA)
     monkeypatch.setattr(audio_mod.sd, "play", lambda *a, **k: llamadas.append("play"))
     monkeypatch.setattr(audio_mod.sd, "wait", lambda: llamadas.append("wait"))
 
@@ -34,6 +35,7 @@ def test_modo_bloqueante_por_defecto_espera(tmp_path, monkeypatch):
 
 def test_modo_no_bloqueante_no_espera(tmp_path, monkeypatch):
     llamadas = []
+    monkeypatch.setattr(audio_mod.sd, "query_devices", lambda: _DISPOSITIVOS_DE_PRUEBA)
     monkeypatch.setattr(audio_mod.sd, "play", lambda *a, **k: llamadas.append("play"))
     monkeypatch.setattr(audio_mod.sd, "wait", lambda: llamadas.append("wait"))
 
@@ -44,12 +46,51 @@ def test_modo_no_bloqueante_no_espera(tmp_path, monkeypatch):
 
 def test_archivo_inexistente_no_llama_a_sounddevice(tmp_path, monkeypatch):
     llamadas = []
+    monkeypatch.setattr(audio_mod.sd, "query_devices", lambda: _DISPOSITIVOS_DE_PRUEBA)
     monkeypatch.setattr(audio_mod.sd, "play", lambda *a, **k: llamadas.append("play"))
     monkeypatch.setattr(audio_mod.sd, "wait", lambda: llamadas.append("wait"))
 
     ReproductorAudio().reproducir(tmp_path / "no_existe.wav")
 
     assert llamadas == []
+
+
+def test_reproducir_usa_el_indice_del_bafle_encontrado(tmp_path, monkeypatch):
+    monkeypatch.setattr(audio_mod.sd, "query_devices", lambda: _DISPOSITIVOS_DE_PRUEBA)
+    dispositivo_usado = {}
+    monkeypatch.setattr(
+        audio_mod.sd, "play", lambda *a, **k: dispositivo_usado.update(device=k.get("device"))
+    )
+    monkeypatch.setattr(audio_mod.sd, "wait", lambda: None)
+
+    ReproductorAudio("UAC").reproducir(_crear_wav_de_prueba(tmp_path))
+
+    assert dispositivo_usado["device"] == 2  # índice de "UACDemoV10" en _DISPOSITIVOS_DE_PRUEBA
+
+
+def test_reproducir_cae_a_dispositivo_por_defecto_si_no_hay_bafle(tmp_path, monkeypatch):
+    monkeypatch.setattr(audio_mod.sd, "query_devices", lambda: _DISPOSITIVOS_DE_PRUEBA)
+    dispositivo_usado = {}
+    monkeypatch.setattr(
+        audio_mod.sd, "play", lambda *a, **k: dispositivo_usado.update(device=k.get("device"))
+    )
+    monkeypatch.setattr(audio_mod.sd, "wait", lambda: None)
+
+    ReproductorAudio("bluetooth").reproducir(_crear_wav_de_prueba(tmp_path))
+
+    assert dispositivo_usado["device"] is None
+
+
+def test_buscar_dispositivo_salida_encuentra_por_substring(monkeypatch):
+    monkeypatch.setattr(audio_mod.sd, "query_devices", lambda: _DISPOSITIVOS_DE_PRUEBA)
+
+    assert buscar_dispositivo_salida("UAC") == 2
+
+
+def test_buscar_dispositivo_salida_sin_coincidencia_devuelve_none(monkeypatch):
+    monkeypatch.setattr(audio_mod.sd, "query_devices", lambda: _DISPOSITIVOS_DE_PRUEBA)
+
+    assert buscar_dispositivo_salida("bluetooth") is None
 
 
 def test_buscar_dispositivo_entrada_encuentra_por_substring(monkeypatch):

@@ -37,7 +37,7 @@ def construir_escuchador() -> Escuchador:
     maquina = MaquinaEstados()
     voz = VozConsola()
     serial = construir_serial()
-    audio = ReproductorAudio()
+    audio = ReproductorAudio(config.DISPOSITIVO_BAFLE)
     ejecutor = Ejecutor(voz=voz, serial=serial, audio=audio)
     return Escuchador(config.RUTA_MODELO_VOSK, maquina, ejecutor, config.DISPOSITIVO_MIC)
 
