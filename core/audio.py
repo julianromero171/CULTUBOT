@@ -17,6 +17,31 @@ import sounddevice as sd
 _DTYPE_POR_ANCHO = {1: np.int8, 2: np.int16, 4: np.int32}
 
 
+def _resamplear(audio: np.ndarray, frecuencia_original: int, frecuencia_destino: int) -> np.ndarray:
+    """Convierte el audio a la tasa de muestreo que el bafle sí soporta
+    (interpolación lineal simple, suficiente para narración hablada). Los
+    .wav reales no todos comparten la misma tasa (unos 44100 Hz, otros
+    24000 Hz), y el bafle USB solo acepta la suya — hay que igualarla
+    siempre, no asumir que el archivo ya viene en la tasa correcta.
+    """
+    if frecuencia_original == frecuencia_destino:
+        return audio
+
+    dtype_original = audio.dtype
+    n_muestras_originales = audio.shape[0]
+    n_muestras_destino = max(1, round(n_muestras_originales * frecuencia_destino / frecuencia_original))
+    indices_originales = np.arange(n_muestras_originales)
+    indices_destino = np.linspace(0, n_muestras_originales - 1, n_muestras_destino)
+
+    if audio.ndim == 1:
+        return np.interp(indices_destino, indices_originales, audio).astype(dtype_original)
+
+    canales = [
+        np.interp(indices_destino, indices_originales, audio[:, c]) for c in range(audio.shape[1])
+    ]
+    return np.stack(canales, axis=1).astype(dtype_original)
+
+
 def _indice_dispositivo(coincidencia: str, campo_canales: str) -> int | None:
     dispositivos = sd.query_devices()
     coincidencia = coincidencia.lower()
@@ -100,6 +125,15 @@ class ReproductorAudio:
         if canales > 1:
             audio = audio.reshape(-1, canales)
 
-        sd.play(audio, samplerate=frecuencia, device=self._indice_salida)
+        frecuencia_reproduccion = frecuencia
+        if self._indice_salida is not None:
+            frecuencia_dispositivo = int(
+                sd.query_devices(self._indice_salida)["default_samplerate"]
+            )
+            if frecuencia_dispositivo != frecuencia:
+                audio = _resamplear(audio, frecuencia, frecuencia_dispositivo)
+                frecuencia_reproduccion = frecuencia_dispositivo
+
+        sd.play(audio, samplerate=frecuencia_reproduccion, device=self._indice_salida)
         if bloqueante:
             sd.wait()
