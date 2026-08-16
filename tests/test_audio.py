@@ -173,3 +173,50 @@ def test_reproducir_convierte_la_tasa_si_el_bafle_no_soporta_la_del_archivo(tmp_
 
     assert llamada["samplerate"] == 44100
     assert llamada["muestras"] == 44100  # se convirtió el 1 segundo de 16000 a 44100 Hz
+
+
+def test_aplicar_ganancia_sin_cambios_si_es_1():
+    audio = np.array([100, -100, 200], dtype=np.int16)
+
+    resultado = audio_mod._aplicar_ganancia(audio, 1.0)
+
+    assert resultado is audio
+
+
+def test_aplicar_ganancia_amplifica():
+    audio = np.array([100, -100, 200], dtype=np.int16)
+
+    resultado = audio_mod._aplicar_ganancia(audio, 2.0)
+
+    assert list(resultado) == [200, -200, 400]
+    assert resultado.dtype == np.int16
+
+
+def test_aplicar_ganancia_recorta_para_no_desbordar():
+    audio = np.array([30000, -30000], dtype=np.int16)
+
+    resultado = audio_mod._aplicar_ganancia(audio, 2.0)
+
+    limite = np.iinfo(np.int16)
+    assert resultado[0] == limite.max
+    assert resultado[1] == limite.min
+
+
+def test_reproducir_aplica_la_ganancia_configurada(tmp_path, monkeypatch):
+    ruta = tmp_path / "tono.wav"
+    with wave.open(str(ruta), "wb") as wf:
+        wf.setnchannels(1)
+        wf.setsampwidth(2)
+        wf.setframerate(44100)  # coincide con el default_samplerate del bafle de prueba, sin resampleo
+        wf.writeframes(np.array([1000], dtype=np.int16).tobytes())
+
+    monkeypatch.setattr(audio_mod.sd, "query_devices", _mock_query_devices)
+    llamada = {}
+    monkeypatch.setattr(
+        audio_mod.sd, "play", lambda audio, **k: llamada.update(pico=int(audio.max()))
+    )
+    monkeypatch.setattr(audio_mod.sd, "wait", lambda: None)
+
+    ReproductorAudio("UAC", ganancia=2.0).reproducir(ruta)
+
+    assert llamada["pico"] == 2000

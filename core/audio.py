@@ -42,6 +42,21 @@ def _resamplear(audio: np.ndarray, frecuencia_original: int, frecuencia_destino:
     return np.stack(canales, axis=1).astype(dtype_original)
 
 
+def _aplicar_ganancia(audio: np.ndarray, ganancia: float) -> np.ndarray:
+    """Multiplica la amplitud por `ganancia` (ver config.GANANCIA_AUDIO) y
+    recorta (clipping) al rango del tipo de dato original, para no
+    desbordarlo y generar ruido/distorsión si la ganancia es alta.
+    """
+    if ganancia == 1.0:
+        return audio
+
+    dtype_original = audio.dtype
+    limite = np.iinfo(dtype_original)
+    amplificado = audio.astype(np.float64) * ganancia
+    recortado = np.clip(amplificado, limite.min, limite.max)
+    return recortado.astype(dtype_original)
+
+
 def _indice_dispositivo(coincidencia: str, campo_canales: str) -> int | None:
     dispositivos = sd.query_devices()
     coincidencia = coincidencia.lower()
@@ -88,13 +103,17 @@ def buscar_dispositivo_salida(coincidencia: str) -> int | None:
 
 
 class ReproductorAudio:
-    def __init__(self, dispositivo: str = "UAC") -> None:
+    def __init__(self, dispositivo: str = "UAC", ganancia: float = 1.0) -> None:
         """dispositivo: substring del nombre del bafle a usar (ver
         buscar_dispositivo_salida). Se resuelve la primera vez que se
         reproduce algo, no en el constructor, para no consultar los
         dispositivos de audio si nunca se llega a usar.
+
+        ganancia: multiplicador de volumen aplicado en software (ver
+        config.GANANCIA_AUDIO), además del volumen de ALSA.
         """
         self._dispositivo = dispositivo
+        self._ganancia = ganancia
         self._indice_salida: int | None = None
         self._indice_resuelto = False
 
@@ -133,6 +152,8 @@ class ReproductorAudio:
             if frecuencia_dispositivo != frecuencia:
                 audio = _resamplear(audio, frecuencia, frecuencia_dispositivo)
                 frecuencia_reproduccion = frecuencia_dispositivo
+
+        audio = _aplicar_ganancia(audio, self._ganancia)
 
         sd.play(audio, samplerate=frecuencia_reproduccion, device=self._indice_salida)
         if bloqueante:

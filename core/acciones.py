@@ -19,6 +19,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Protocol
 
+from core import mensajes
 from core.audio import ReproductorAudio
 from core.comandos import Accion, Opcion, Resultado
 from core.estados import Estado, MaquinaEstados
@@ -74,6 +75,7 @@ class Ejecutor:
         if maquina.estado is Estado.DORMIDO:
             maquina.transicionar(Estado.ESPERANDO_ORDEN)
         self._voz.hablar("Hola, ¿en qué puedo ayudarte?")
+        self._audio.reproducir(mensajes.BIENVENIDA)
 
     def _preguntar_opcion(self, resultado: Resultado, maquina: MaquinaEstados) -> None:
         lugar = resultado.lugar
@@ -85,6 +87,11 @@ class Ejecutor:
             f"Encontré {lugar.nombre}. "
             "¿Quieres el dibujo, dibujo con audio, o solo audio?"
         )
+
+        ruta_eleccion = mensajes.ELECCION_POR_LUGAR.get(lugar.clave)
+        if ruta_eleccion is not None:
+            self._audio.reproducir(ruta_eleccion)
+        self._audio.reproducir(mensajes.PREGUNTAR_OPCION)
 
     def _confirmar(self, resultado: Resultado, maquina: MaquinaEstados) -> None:
         lugar: Lugar | None = maquina.ultimo_lugar
@@ -125,6 +132,7 @@ class Ejecutor:
 
     def _salir(self, resultado: Resultado, maquina: MaquinaEstados) -> None:
         self._voz.hablar("Hasta luego.")
+        self._audio.reproducir(mensajes.DESPEDIDA)
         maquina.reiniciar()
 
     def _no_entiende(self, resultado: Resultado, maquina: MaquinaEstados) -> None:

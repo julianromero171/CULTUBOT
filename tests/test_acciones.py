@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from core import mensajes
 from core.acciones import Ejecutor
 from core.comandos import Accion, Opcion, Resultado
 from core.estados import Estado, MaquinaEstados
@@ -41,17 +42,18 @@ def _construir(exito_serial: bool = True):
 
 
 def test_activar_transiciona_a_esperando_orden():
-    ejecutor, voz, _, _ = _construir()
+    ejecutor, voz, _, audio = _construir()
     maquina = MaquinaEstados()
 
     ejecutor.ejecutar(Resultado(Accion.ACTIVAR), maquina)
 
     assert maquina.estado is Estado.ESPERANDO_ORDEN
     assert any("ayudarte" in m for m in voz.mensajes)
+    assert audio.rutas_reproducidas == [str(mensajes.BIENVENIDA)]
 
 
 def test_preguntar_opcion_pasa_a_confirmando_y_guarda_lugar():
-    ejecutor, voz, _, _ = _construir()
+    ejecutor, voz, _, audio = _construir()
     maquina = MaquinaEstados()
     maquina.transicionar(Estado.ESPERANDO_ORDEN)
     lugar = LUGARES["biblioteca"]
@@ -61,6 +63,24 @@ def test_preguntar_opcion_pasa_a_confirmando_y_guarda_lugar():
     assert maquina.estado is Estado.CONFIRMANDO
     assert maquina.ultimo_lugar is lugar
     assert any(lugar.nombre in m for m in voz.mensajes)
+    assert audio.rutas_reproducidas == [
+        str(mensajes.ELECCION_POR_LUGAR[lugar.clave]),
+        str(mensajes.PREGUNTAR_OPCION),
+    ]
+
+
+def test_preguntar_opcion_sin_audio_de_eleccion_solo_reproduce_la_pregunta(monkeypatch):
+    # Todos los lugares del catálogo tienen audio de elección, pero si en
+    # el futuro se agrega uno sin ELECCION_POR_LUGAR, no debe romperse.
+    ejecutor, _, _, audio = _construir()
+    maquina = MaquinaEstados()
+    maquina.transicionar(Estado.ESPERANDO_ORDEN)
+    lugar = LUGARES["biblioteca"]
+    monkeypatch.delitem(mensajes.ELECCION_POR_LUGAR, lugar.clave)
+
+    ejecutor.ejecutar(Resultado(Accion.PREGUNTAR_OPCION, lugar=lugar), maquina)
+
+    assert audio.rutas_reproducidas == [str(mensajes.PREGUNTAR_OPCION)]
 
 
 def test_confirmar_dibujo_envia_gcode_y_vuelve_a_esperando_orden():
@@ -131,7 +151,7 @@ def test_confirmar_avisa_si_falla_el_envio_de_gcode():
 
 
 def test_salir_reinicia_la_maquina():
-    ejecutor, voz, _, _ = _construir()
+    ejecutor, voz, _, audio = _construir()
     maquina = MaquinaEstados()
     maquina.transicionar(Estado.ESPERANDO_ORDEN)
 
@@ -139,6 +159,7 @@ def test_salir_reinicia_la_maquina():
 
     assert maquina.estado is Estado.DORMIDO
     assert any("luego" in m.lower() for m in voz.mensajes)
+    assert audio.rutas_reproducidas == [str(mensajes.DESPEDIDA)]
 
 
 def test_no_entiende_no_cambia_estado():

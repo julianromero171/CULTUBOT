@@ -4,6 +4,62 @@ Este documento resume todo lo decidido y construido hasta ahora, para que
 puedas retomar el proyecto en Claude Code sin perder contexto de la
 conversación anterior.
 
+## Hardware real, mensajes hablados y reconocimiento por alias (2026-08-15)
+
+Con la Raspberry Pi 5 física ya en uso (mic USB y bafle USB conectados),
+salieron varios problemas que solo aparecen con hardware real (no se
+detectan en el PC de desarrollo) y se corrigieron:
+
+- **Micrófono y bafle USB no soportan 16000 Hz nativo** (chips baratos,
+  solo 44100/48000 Hz): `escuchar.py`, `herramientas/probar_microfono.py`
+  y `core/audio.py` ahora detectan la tasa real del dispositivo
+  (`buscar_dispositivo_entrada`/`buscar_dispositivo_salida` en
+  `core/audio.py`) en vez de forzar 16000 Hz. `ReproductorAudio` además
+  **resamplea** el audio a la tasa que el bafle sí soporta si no coinciden
+  (los `.wav` reales no todos comparten tasa).
+- **"cultubot" no existe en el diccionario del modelo de Vosk** (nombre
+  inventado) — la gramática restringida lo descartaba silenciosamente y
+  el robot nunca se activaba. Se cambió la palabra de activación a
+  "cultura"/"culto" (`core/vocabulario.py`), que sí existen y que
+  `core/normalizador.py` ya convertía a "cultubot" internamente.
+- **Volumen bajo:** el bafle usaba el control ALSA `PCM` muy bajo por
+  defecto — se subió a 100% (`amixer -c <tarjeta> sset PCM 100%`, la
+  tarjeta se identifica con `cat /proc/asound/cards`). Además se agregó
+  `config.GANANCIA_AUDIO` (env `CULTUBOT_GANANCIA_AUDIO`) como ganancia
+  digital adicional en `core/audio.py`, con recorte (clipping) automático
+  para no distorsionar si se sube demasiado.
+- **Catálogo actualizado:** el sitio "locomotora" se renombró a
+  **"ferrocarril"** (mismo lugar, nuevo nombre/audio). "casa de
+  santander" ya se había reemplazado antes por "templo historico".
+  Catálogo final: biblioteca, cerro de tasajero, templo historico,
+  ferrocarril, cafe.
+- **Reconocimiento por alias reales:** `core/lugares.py`'s `Lugar` ahora
+  admite `alias` (tupla de palabras reales adicionales que también
+  activan el lugar, ej. decir solo "cerro" en vez de "cerro de
+  tasajero", o "locomotora" para "ferrocarril"). Importante: los alias
+  deben ser **palabras reales que existan en el diccionario del modelo**
+  — se probó que sílabas sueltas (ej. "ce", "to", "ca") normalmente NO
+  están en el diccionario y Vosk las ignora igual que pasó con
+  "cultubot"/"tasajero", así que no sirven para "acelerar" el
+  reconocimiento. Antes de agregar un alias nuevo, conviene verificar
+  contra el modelo real (ver más abajo).
+- **El robot ahora "habla" en los puntos clave de la conversación**, sin
+  agregar TTS (sigue la misma decisión de siempre: audio pregrabado).
+  Nuevo `core/mensajes.py` cataloga los audios fijos y `core/acciones.py`
+  (`Ejecutor`) los reproduce además de imprimir el texto por consola:
+  `bienvenida.wav` al activarse, `eleccion_<sitio>.wav` +
+  `dibujo_con_audio_o_sin_audio.wav` al preguntar la opción, y
+  `despedida.wav` al salir.
+
+### Cómo verificar si una palabra existe en el diccionario del modelo (sin micrófono)
+
+```bash
+python3 -c "import json; from vosk import Model, KaldiRecognizer; m = Model('/home/cultubot/CULTUBOT/models/vosk-model-small-es-0.42'); g = json.dumps(['palabra1','palabra2','[unk]']); KaldiRecognizer(m, 16000, g)"
+```
+
+Si no aparece ningún `WARNING ... Ignoring word missing in vocabulary`,
+la palabra existe y se puede usar como clave o alias con confianza.
+
 ## Reestructuración del 2026-08-03 (sobre lo existente, sin reescribir)
 
 Se reestructuró el proyecto para que quede en estado profesional
@@ -145,7 +201,7 @@ CULTUBOT/
 ├── tests/                   Suite pytest: estados, comandos, normalizador, lugares, vocabulario, acciones, audio, esp32_serial (con transporte falso).
 ├── herramientas/
 │   └── simular_conversacion.py  Simula la conversación completa por texto, sin mic/Vosk/ESP32.
-├── drawings/                Archivos .gcode por sitio (biblioteca, cerro_tasajero, templo_historico, locomotora, cafe). Ya generados por el usuario, pendientes de copiar aquí.
+├── drawings/                Archivos .gcode por sitio (biblioteca, cerro_tasajero, templo_historico, ferrocarril, cafe). Ya generados por el usuario, pendientes de copiar aquí.
 ├── audio/                   Archivos .wav por sitio (mismos 5 nombres que drawings/). FALTAN LOS REALES.
 ├── fluidnc/                 Config de referencia de FluidNC (config_ejemplo.yaml). Se sube UNA VEZ al ESP32.
 ├── models/                  Modelo Vosk (vosk-model-small-es-0.42). Se descarga aparte, no versionado.
@@ -167,7 +223,7 @@ CULTUBOT/
 1. **Probar `ESP32Serial` con la ESP32 física real** — no se ha podido validar el streaming de gcode contra FluidNC de verdad (sin hardware disponible en este momento). Es la prioridad #1 en cuanto haya acceso al hardware.
 2. Completar `fluidnc/config_ejemplo.yaml` con los pines reales (steps_per_mm, STEP/DIR de cada A4988, límites) y subirlo al ESP32.
 3. Confirmar el puerto Serial real en la Raspberry (`ls /dev/tty*` con la ESP32 conectada) y setear `CULTUBOT_PUERTO_ESP32` (ver `config.py`; ya no hace falta editar código).
-4. **Copiar los `.gcode` reales a `drawings/`** — ya están generados (en otra computadora), pendiente pasarlos a este proyecto con los nombres exactos del catálogo (`biblioteca.gcode`, `cerro_tasajero.gcode`, `templo_historico.gcode`, `locomotora.gcode`, `cafe.gcode`). Usar `python herramientas/validar_gcode.py` apenas se copien, para revisarlos sin necesitar la ESP32.
+4. **Copiar los `.gcode` reales a `drawings/`** — ya están generados (en otra computadora), pendiente pasarlos a este proyecto con los nombres exactos del catálogo (`biblioteca.gcode`, `cerro_tasajero.gcode`, `templo_historico.gcode`, `ferrocarril.gcode`, `cafe.gcode`). Usar `python herramientas/validar_gcode.py` apenas se copien, para revisarlos sin necesitar la ESP32.
 5. Grabar y colocar los `.wav` reales en `audio/` (mismos 5 nombres, extensión `.wav`).
 6. Validar en la Raspberry Pi 5 real que `pip install -r requirements.txt` funciona y que PortAudio está instalado (`sudo apt install portaudio19-dev` si hace falta).
 

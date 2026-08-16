@@ -49,7 +49,7 @@ def construir_gramatica() -> str:
     """
     frases = set(PALABRAS_ACTIVACION + PALABRAS_SALIR + PALABRAS_OPCION)
     for lugar in LUGARES.values():
-        frases.add(lugar.clave)
+        frases.update(lugar.frases_reconocidas())
 
     frases.add("[unk]")
     return json.dumps(sorted(frases), ensure_ascii=False)

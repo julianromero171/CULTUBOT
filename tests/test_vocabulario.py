@@ -10,6 +10,13 @@ def test_gramatica_incluye_todos_los_lugares():
         assert lugar.clave in frases
 
 
+def test_gramatica_incluye_los_alias_de_los_lugares():
+    frases = json.loads(construir_gramatica())
+    for lugar in LUGARES.values():
+        for alias in lugar.alias:
+            assert alias in frases
+
+
 def test_gramatica_incluye_unk():
     frases = json.loads(construir_gramatica())
     assert "[unk]" in frases
