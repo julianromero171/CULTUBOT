@@ -1,0 +1,112 @@
+# FluidNC config.yaml - Voice-controlled CNC
+# Hardware:
+#   ESP32 DevKit V1
+#   2x NEMA17 con drivers A4988 (ejes X, Y)
+#   1x Micro servo (usado como eje Z)
+#   2x Finales de carrera (X-Lim, Y-Lim)
+#   Micro-SD por SPI
+
+name: "Voice Controlled Machine"
+board: "ESP32 DevKit V1"
+
+stepping:
+  engine: RMT
+  idle_ms: 250
+  pulse_us: 4
+  dir_delay_us: 1
+  disable_delay_us: 0
+
+axes:
+  shared_stepper_disable_pin: NO_PIN
+  shared_stepper_reset_pin: NO_PIN
+
+  x:
+    steps_per_mm: 80.0
+    max_rate_mm_per_min: 1000.0
+    acceleration_mm_per_sec2: 100.0
+    max_travel_mm: 200.0
+    soft_limits: false
+    homing:
+      cycle: 1
+      positive_direction: false
+      mpos_mm: 0.0
+      feed_mm_per_min: 100.0
+      seek_mm_per_min: 500.0
+      settle_ms: 500
+      seek_scaler: 1.1
+      feed_scaler: 1.1
+    motor0:
+      limit_neg_pin: gpio.15:low:pu
+      limit_pos_pin: NO_PIN
+      limit_all_pin: NO_PIN
+      hard_limits: false
+      pulloff_mm: 1.0
+      stepstick:
+        direction_pin: gpio.26
+        step_pin: gpio.12
+        disable_pin: NO_PIN
+
+  y:
+    steps_per_mm: 80.0
+    max_rate_mm_per_min: 1000.0
+    acceleration_mm_per_sec2: 100.0
+    max_travel_mm: 200.0
+    soft_limits: false
+    homing:
+      cycle: 2
+      positive_direction: false
+      mpos_mm: 0.0
+      feed_mm_per_min: 100.0
+      seek_mm_per_min: 500.0
+      settle_ms: 500
+      seek_scaler: 1.1
+      feed_scaler: 1.1
+    motor0:
+      limit_neg_pin: gpio.4:low:pu
+      limit_pos_pin: NO_PIN
+      limit_all_pin: NO_PIN
+      hard_limits: false
+      pulloff_mm: 1.0
+      stepstick:
+        direction_pin: gpio.25
+        step_pin: gpio.14
+        disable_pin: NO_PIN
+
+  z:
+    steps_per_mm: 1.0
+    max_rate_mm_per_min: 6000.0
+    acceleration_mm_per_sec2: 1000.0
+    max_travel_mm: 180.0
+    soft_limits: false
+    motor0:
+      limit_neg_pin: NO_PIN
+      limit_pos_pin: NO_PIN
+      limit_all_pin: NO_PIN
+      hard_limits: false
+      pulloff_mm: 0.1
+      rc_servo:
+        output_pin: gpio.27
+        pwm_hz: 50
+        min_pulse_us: 500
+        max_pulse_us: 2500
+
+spi:
+  miso_pin: gpio.19
+  mosi_pin: gpio.23
+  sck_pin: gpio.18
+
+sdcard:
+  cs_pin: gpio.5
+  card_detect_pin: NO_PIN
+
+start:
+  must_home: false
+  deactivate_parking: false
+  check_limits: false
+
+macros:
+  startup_line0: "$X"
+  startup_line1: ""
+  after_reset: ""
+  after_unlock: ""
+  after_homing: ""

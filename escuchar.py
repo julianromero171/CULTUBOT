@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import json
 import queue
+from math import gcd
 
+import numpy as np
 import sounddevice as sd
 from vosk import KaldiRecognizer, Model
 
@@ -19,7 +21,48 @@ from core.estados import MaquinaEstados
 from core.normalizador import normalizar
 from core.vocabulario import construir_gramatica
 
+# Vosk trabaja mejor a 16000 Hz (los modelos estan entrenados a esa tasa).
+# Los micros USB baratos capturan a 44100/48000 nativo. Se captura a la
+# tasa del mic y se resamplea a 16000 en el MAIN LOOP (no en el callback
+# de PortAudio, que debe ser instantaneo para no perder audio).
+TASA_VOSK = 16000
+
 BLOQUE = 8000
+
+try:
+    from scipy.signal import resample_poly
+    _RESAMPLE_METODO = "scipy"
+except ImportError:
+    resample_poly = None
+    _RESAMPLE_METODO = "numpy"
+
+
+def _resample_a_16000(audio_bytes: bytes, tasa_entrada: int) -> bytes:
+    """Convierte audio (int16 mono) de tasa_entrada Hz a 16000 Hz para Vosk."""
+    if tasa_entrada == TASA_VOSK:
+        return audio_bytes
+
+    audio = np.frombuffer(audio_bytes, dtype=np.int16)
+
+    if _RESAMPLE_METODO == "scipy":
+        g = gcd(tasa_entrada, TASA_VOSK)
+        up = TASA_VOSK // g
+        down = tasa_entrada // g
+        resampled = resample_poly(audio.astype(np.float32), up=up, down=down)
+        return resampled.astype(np.int16).tobytes()
+
+    # Fallback numpy: interpolacion lineal (menor calidad pero sin dependencia)
+    n_in = len(audio)
+    n_out = int(n_in * TASA_VOSK / tasa_entrada)
+    indices = np.linspace(0, n_in - 1, n_out)
+    idx_low = indices.astype(np.int32)
+    idx_high = np.minimum(idx_low + 1, n_in - 1)
+    frac = indices - idx_low
+    out = (
+        audio[idx_low].astype(np.float32) * (1 - frac)
+        + audio[idx_high].astype(np.float32) * frac
+    )
+    return out.astype(np.int16).tobytes()
 
 
 class Escuchador:
@@ -30,30 +73,38 @@ class Escuchador:
         ejecutor: Ejecutor,
         dispositivo_mic: str = "USB",
     ) -> None:
-        # Muchos micrófonos USB baratos no soportan 16000 Hz de forma
-        # nativa (solo 44100/48000). Se detecta el dispositivo por nombre
-        # y se usa la tasa que él mismo reporta, en vez de forzar 16000,
-        # para no chocar con PortAudioError: Invalid sample rate.
         self._indice_mic = buscar_dispositivo_entrada(dispositivo_mic)
         self._muestreo_hz = int(sd.query_devices(self._indice_mic)["default_samplerate"])
 
         self._modelo = Model(ruta_modelo)
         gramatica = construir_gramatica()
-        self._reconocedor = KaldiRecognizer(self._modelo, self._muestreo_hz, gramatica)
+        # Vosk siempre a 16000 Hz, aunque el mic capture a otra tasa.
+        self._reconocedor = KaldiRecognizer(self._modelo, TASA_VOSK, gramatica)
         self._maquina = maquina
         self._ejecutor = ejecutor
+        # La cola guarda bytes CRUDOS a tasa_mic. Resamplea el main loop,
+        # NO el callback, para no bloquear PortAudio.
         self._cola: queue.Queue[bytes] = queue.Queue()
+        # Contador de overflows para no imprimirlos dentro del callback (print
+        # bloquea con el buffer de stdout y agrava el problema). El main loop
+        # los reporta cada N frames procesados.
+        self._overflows = 0
+        self._frames_procesados = 0
 
     def _callback_audio(self, indata, frames, time, status) -> None:
+        # Este callback corre en el thread RT de PortAudio. Solo debe:
+        #  1) Contar overflows si status indica alguno (NO print)
+        #  2) Encolar los bytes
+        # Nada mas. Nada de print, nada de resample.
         if status:
-            print(status)
+            self._overflows += 1
         self._cola.put(bytes(indata))
 
     def escuchar(self) -> None:
         print("=" * 50)
         print("CultuBot iniciado")
         print(f"Micrófono: [{self._indice_mic}] {sd.query_devices(self._indice_mic)['name']}")
-        print(f"Tasa de muestreo: {self._muestreo_hz} Hz")
+        print(f"Tasa mic: {self._muestreo_hz} Hz  ->  Vosk: {TASA_VOSK} Hz (resample: {_RESAMPLE_METODO})")
         print("Estoy escuchando...")
         print('Di "salir" para cerrar el programa.')
         print("=" * 50)
@@ -67,7 +118,17 @@ class Escuchador:
             callback=self._callback_audio,
         ):
             while True:
-                datos = self._cola.get()
+                datos_crudos = self._cola.get()
+
+                # Resample AQUI, en el main loop.
+                datos = _resample_a_16000(datos_crudos, self._muestreo_hz)
+
+                self._frames_procesados += 1
+                # Cada 50 frames (~9 segundos), reportar overflow acumulado
+                # si hay para vigilar la salud del pipeline. Si empieza a
+                # subir, hay que optimizar mas.
+                if self._frames_procesados % 50 == 0 and self._overflows > 0:
+                    print(f"[health] overflows acumulados: {self._overflows}")
 
                 if not self._reconocedor.AcceptWaveform(datos):
                     continue
