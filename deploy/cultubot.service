@@ -1,0 +1,16 @@
+[Unit]
+Description=CultuBot - robot dibujador por voz
+After=network.target sound.target
+
+[Service]
+Type=simple
+User=cultubot
+WorkingDirectory=/home/cultubot/CULTUBOT
+ExecStart=/home/cultubot/CULTUBOT/venv/bin/python3 -u main.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
