@@ -98,6 +98,8 @@ class ESP32Serial:
                 print(f"[ESP32Serial] {e}")
                 return False
 
+        self._desbloquear()
+
         lineas = [
             linea.strip()
             for linea in ruta.read_text(encoding="utf-8").splitlines()
@@ -118,6 +120,19 @@ class ESP32Serial:
                 return False
 
         return True
+
+    def _desbloquear(self) -> None:
+        """FluidNC arranca (o puede quedar) en estado de ALARMA, que
+        rechaza cualquier gcode de movimiento con "error:9" hasta que se
+        le mande "$X". El propio fluidnc/config.yaml ya intenta
+        desbloquear al arrancar (startup_line0: "$X"), pero eso no cubre
+        una alarma que se dispare DESPUÉS del arranque (ej. un gcode con
+        coordenadas fuera de rango) ni placas que no se reinician solas
+        al abrir el puerto serial. Se manda acá antes de cada envío para
+        no depender de ninguna de esas dos cosas.
+        """
+        self._conexion.write(b"$X\n")
+        self._leer_respuesta()
 
     def _leer_respuesta(self) -> str | None:
         cruda = self._conexion.readline().decode(errors="ignore").strip()

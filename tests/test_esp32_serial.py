@@ -3,6 +3,11 @@ Prueba el protocolo real de ESP32Serial (envío línea por línea, filtrado
 de comentarios, detección de "error", timeout) sin necesitar una ESP32
 física conectada: se le inyecta un transporte falso en memoria en vez
 del serial.Serial real (ver interface/esp32_serial.py:conectar).
+
+Nota: enviar_gcode() ahora manda "$X" (desbloqueo de alarma) antes de
+cada archivo (ver _desbloquear), así que las listas de respuestas de
+FakeTransporte incluyen una respuesta extra al principio para esa
+línea, y las aserciones de `escrituras` empiezan con "$X\n".
 """
 
 from interface.esp32_serial import ESP32Serial
@@ -36,11 +41,11 @@ def _escribir_gcode(tmp_path, contenido: str):
 
 def test_envia_todas_las_lineas_y_devuelve_true(tmp_path):
     ruta = _escribir_gcode(tmp_path, "G21\nG90\nG0 X0 Y0\n")
-    transporte = FakeTransporte([b"ok\n", b"ok\n", b"ok\n"])
+    transporte = FakeTransporte([b"ok\n", b"ok\n", b"ok\n", b"ok\n"])
     esp = ESP32Serial(transporte=transporte)
 
     assert esp.enviar_gcode(ruta) is True
-    assert transporte.escrituras == ["G21\n", "G90\n", "G0 X0 Y0\n"]
+    assert transporte.escrituras == ["$X\n", "G21\n", "G90\n", "G0 X0 Y0\n"]
 
 
 def test_filtra_comentarios_de_gcode(tmp_path):
@@ -48,21 +53,35 @@ def test_filtra_comentarios_de_gcode(tmp_path):
         tmp_path,
         "; esto es un comentario\nG21\n(otro comentario)\nG90\n",
     )
-    transporte = FakeTransporte([b"ok\n", b"ok\n"])
+    transporte = FakeTransporte([b"ok\n", b"ok\n", b"ok\n"])
     esp = ESP32Serial(transporte=transporte)
 
     assert esp.enviar_gcode(ruta) is True
-    assert transporte.escrituras == ["G21\n", "G90\n"]
+    assert transporte.escrituras == ["$X\n", "G21\n", "G90\n"]
 
 
 def test_detiene_el_envio_si_la_esp32_responde_error(tmp_path):
     ruta = _escribir_gcode(tmp_path, "G21\nG90\nG0 X999 Y999\n")
-    transporte = FakeTransporte([b"ok\n", b"error:9\n"])
+    transporte = FakeTransporte([b"ok\n", b"ok\n", b"error:9\n"])
     esp = ESP32Serial(transporte=transporte)
 
     assert esp.enviar_gcode(ruta) is False
     # Se detiene apenas ve el error, no manda la tercera línea.
-    assert transporte.escrituras == ["G21\n", "G90\n"]
+    assert transporte.escrituras == ["$X\n", "G21\n", "G90\n"]
+
+
+def test_manda_desbloqueo_antes_de_cada_envio(tmp_path):
+    # $X se manda en CADA enviar_gcode(), no solo la primera vez -- para
+    # recuperarse de una alarma que se dispare a mitad de sesión, sin
+    # necesitar reconectar.
+    ruta = _escribir_gcode(tmp_path, "G21\n")
+    transporte = FakeTransporte([b"ok\n", b"ok\n", b"ok\n", b"ok\n"])
+    esp = ESP32Serial(transporte=transporte)
+
+    esp.enviar_gcode(ruta)
+    esp.enviar_gcode(ruta)
+
+    assert transporte.escrituras == ["$X\n", "G21\n", "$X\n", "G21\n"]
 
 
 def test_timeout_sin_respuesta_devuelve_false(tmp_path):
