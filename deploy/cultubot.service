@@ -10,6 +10,11 @@ WorkingDirectory=/home/cultubot/CULTUBOT
 ExecStart=/home/cultubot/CULTUBOT/venv/bin/python3 -u main.py
 Restart=always
 RestartSec=5
+# Watchdog: si el proceso se cuelga en cualquier punto (no solo el
+# microfono) y deja de avisar "sigo vivo" por 45s, systemd lo mata y
+# Restart=always lo vuelve a arrancar. Ver core/systemd_watchdog.py.
+NotifyAccess=main
+WatchdogSec=45
 StandardOutput=journal
 StandardError=journal
 

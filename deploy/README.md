@@ -34,3 +34,14 @@ Mientras el servicio esté activo, tiene el micrófono/bafle/puerto
 serial tomados — si intentas correr `python3 main.py` a mano al mismo
 tiempo va a fallar. Siempre `sudo systemctl stop cultubot` antes de
 probar cambios manualmente.
+
+## Auto-recuperación si se cuelga
+
+El servicio tiene `Restart=always` + un watchdog (`WatchdogSec=45`,
+ver `core/systemd_watchdog.py`): si el programa se queda colgado en
+cualquier punto (micrófono, bafle, comunicación con la ESP32), deja de
+avisarle a systemd que sigue vivo, y a los 45s systemd lo mata y lo
+vuelve a arrancar solo — sin que nadie tenga que notar ni intervenir.
+Esto se agregó porque se confirmó en la Pi real que el proceso podía
+quedar "activo" para `systemctl status` pero mudo y sordo para
+siempre, sin ningún error visible.

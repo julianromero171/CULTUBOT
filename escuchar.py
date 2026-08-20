@@ -19,6 +19,7 @@ from core.audio import buscar_dispositivo_entrada
 from core.comandos import Accion, interpretar
 from core.estados import MaquinaEstados
 from core.normalizador import normalizar
+from core.systemd_watchdog import WatchdogSystemd
 from core.vocabulario import construir_gramatica
 
 # Vosk trabaja mejor a 16000 Hz (los modelos estan entrenados a esa tasa).
@@ -110,6 +111,7 @@ class Escuchador:
         # los reporta cada N frames procesados.
         self._overflows = 0
         self._frames_procesados = 0
+        self._watchdog = WatchdogSystemd()
 
     def _callback_audio(self, indata, frames, time, status) -> None:
         # Este callback corre en el thread RT de PortAudio. Solo debe:
@@ -134,6 +136,8 @@ class Escuchador:
         print('Di "salir" para cerrar el programa.')
         print("=" * 50)
 
+        self._watchdog.iniciar()
+
         with sd.RawInputStream(
             samplerate=self._muestreo_hz,
             blocksize=BLOQUE,
@@ -151,6 +155,12 @@ class Escuchador:
                         "-- el stream de PortAudio probablemente murio. "
                         "Terminando para que systemd reinicie el servicio."
                     ) from None
+
+                # Prueba de vida para el watchdog de systemd: si el loop se
+                # cuelga en CUALQUIER punto de aqui en adelante (bafle,
+                # serial, lo que sea), esta marca deja de actualizarse y
+                # systemd reinicia el servicio solo (ver core/systemd_watchdog.py).
+                self._watchdog.marcar_progreso()
 
                 # Resample AQUI, en el main loop.
                 datos = _resample_a_16000(datos_crudos, self._muestreo_hz)
