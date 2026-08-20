@@ -1,4 +1,5 @@
 vosk
 sounddevice
 numpy
+scipy
 pyserial

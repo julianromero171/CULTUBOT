@@ -84,7 +84,16 @@ class Escuchador:
         self._ejecutor = ejecutor
         # La cola guarda bytes CRUDOS a tasa_mic. Resamplea el main loop,
         # NO el callback, para no bloquear PortAudio.
-        self._cola: queue.Queue[bytes] = queue.Queue()
+        #
+        # maxsize acotado a propósito: si el main loop se atrasa aunque sea
+        # un poco, una cola SIN límite crece indefinidamente y el programa
+        # termina procesando audio cada vez más viejo -- nunca se recupera,
+        # y deja de reconocer cualquier cosa después de un rato (confirmado
+        # en la Pi real: los overflows subían sin parar hasta que dejó de
+        # escuchar del todo). Con límite, el callback descarta el bloque
+        # más viejo en vez de acumular atraso: siempre se procesa audio
+        # reciente, aunque se pierda algo puntual.
+        self._cola: queue.Queue[bytes] = queue.Queue(maxsize=10)
         # Contador de overflows para no imprimirlos dentro del callback (print
         # bloquea con el buffer de stdout y agrava el problema). El main loop
         # los reporta cada N frames procesados.
@@ -98,7 +107,12 @@ class Escuchador:
         # Nada mas. Nada de print, nada de resample.
         if status:
             self._overflows += 1
-        self._cola.put(bytes(indata))
+        if self._cola.full():
+            try:
+                self._cola.get_nowait()  # descarta el bloque mas viejo, no acumular atraso
+            except queue.Empty:
+                pass
+        self._cola.put_nowait(bytes(indata))
 
     def escuchar(self) -> None:
         print("=" * 50)
