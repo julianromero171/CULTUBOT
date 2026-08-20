@@ -29,6 +29,17 @@ TASA_VOSK = 16000
 
 BLOQUE = 8000
 
+# Si no llega NADA del microfono en este tiempo, algo esta mal (ni una
+# pausa larga hablando dura tanto) -- probablemente el stream de
+# PortAudio murio silenciosamente (confirmado en la Pi real: el thread
+# de audio dejo de funcionar sin ningun error visible, ni overflows
+# reportados, nada). En vez de quedar colgado para siempre, se asume
+# que el stream murio y se deja que el proceso termine con error, para
+# que systemd (Restart=always en deploy/cultubot.service) lo reinicie
+# solo -- mejor que el robot se reinicie a que se quede mudo y sordo
+# sin que nadie lo note.
+TIMEOUT_SIN_AUDIO_SEGUNDOS = 10.0
+
 try:
     from scipy.signal import resample_poly
     _RESAMPLE_METODO = "scipy"
@@ -132,7 +143,14 @@ class Escuchador:
             callback=self._callback_audio,
         ):
             while True:
-                datos_crudos = self._cola.get()
+                try:
+                    datos_crudos = self._cola.get(timeout=TIMEOUT_SIN_AUDIO_SEGUNDOS)
+                except queue.Empty:
+                    raise RuntimeError(
+                        f"No llego audio del microfono en {TIMEOUT_SIN_AUDIO_SEGUNDOS:.0f}s "
+                        "-- el stream de PortAudio probablemente murio. "
+                        "Terminando para que systemd reinicie el servicio."
+                    ) from None
 
                 # Resample AQUI, en el main loop.
                 datos = _resample_a_16000(datos_crudos, self._muestreo_hz)
