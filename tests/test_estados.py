@@ -41,6 +41,16 @@ def test_flujo_solo_audio_salta_dibujando():
     assert maquina.estado is Estado.NARRANDO
 
 
+def test_confirmando_puede_reentrar_a_confirmando_con_otro_sitio():
+    # Permite volver a preguntar la opción si el usuario dice el nombre
+    # de otro sitio mientras ya estaba en CONFIRMANDO (ver core/comandos.py).
+    maquina = MaquinaEstados()
+    maquina.transicionar(Estado.ESPERANDO_ORDEN)
+    maquina.transicionar(Estado.CONFIRMANDO)
+    maquina.transicionar(Estado.CONFIRMANDO)
+    assert maquina.estado is Estado.CONFIRMANDO
+
+
 def test_reiniciar_vuelve_a_dormido_y_limpia_lugar():
     maquina = MaquinaEstados()
     maquina.transicionar(Estado.ESPERANDO_ORDEN)

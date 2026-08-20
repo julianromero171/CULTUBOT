@@ -69,3 +69,19 @@ def test_confirmando_no_entiende_opcion_invalida():
     maquina.transicionar(Estado.CONFIRMANDO)
     resultado = interpretar("no se que quiero", maquina)
     assert resultado.accion is Accion.NO_ENTIENDE
+
+
+def test_confirmando_decir_otro_sitio_pregunta_por_el_sitio_nuevo():
+    # Bug real confirmado en la Pi: el usuario repetía el nombre del
+    # sitio en vez de una opción, pensando que así reintentaba, y se
+    # quedaba atascado en NO_ENTIENDE para siempre. Ahora se interpreta
+    # como que cambió de opinión.
+    maquina = MaquinaEstados()
+    maquina.transicionar(Estado.ESPERANDO_ORDEN)
+    maquina.transicionar(Estado.CONFIRMANDO)
+
+    resultado = interpretar("templo historico", maquina)
+
+    assert resultado.accion is Accion.PREGUNTAR_OPCION
+    assert resultado.lugar is not None
+    assert resultado.lugar.clave == "templo historico"

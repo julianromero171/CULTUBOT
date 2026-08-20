@@ -37,7 +37,15 @@ _TRANSICIONES_VALIDAS: dict[Estado, set[Estado]] = {
     # Desde CONFIRMANDO se puede ir directo a NARRANDO (opción "solo audio",
     # sin pasar por DIBUJANDO) o a DIBUJANDO (opción "dibujo" / "dibujo con audio"),
     # o volver a ESPERANDO_ORDEN si el usuario no eligió una opción válida.
-    Estado.CONFIRMANDO: {Estado.DIBUJANDO, Estado.NARRANDO, Estado.ESPERANDO_ORDEN},
+    # CONFIRMANDO -> CONFIRMANDO (sí mismo): el usuario dijo el nombre de
+    # OTRO sitio en vez de una opción -> se vuelve a preguntar por el
+    # sitio nuevo (ver core/comandos.py), sin quedar atascado.
+    Estado.CONFIRMANDO: {
+        Estado.DIBUJANDO,
+        Estado.NARRANDO,
+        Estado.ESPERANDO_ORDEN,
+        Estado.CONFIRMANDO,
+    },
     Estado.DIBUJANDO: {Estado.NARRANDO, Estado.FINALIZADO},
     Estado.NARRANDO: {Estado.FINALIZADO},
     Estado.FINALIZADO: {Estado.ESPERANDO_ORDEN, Estado.DORMIDO},

@@ -75,9 +75,19 @@ def interpretar(texto: str, maquina: MaquinaEstados) -> Resultado:
 
     if maquina.estado is Estado.CONFIRMANDO:
         opcion = _detectar_opcion(texto)
-        if opcion is None:
-            return Resultado(Accion.NO_ENTIENDE)
-        return Resultado(Accion.CONFIRMAR, lugar=maquina.ultimo_lugar, opcion=opcion)
+        if opcion is not None:
+            return Resultado(Accion.CONFIRMAR, lugar=maquina.ultimo_lugar, opcion=opcion)
+
+        # Si en vez de una opción dice el nombre de OTRO sitio, se
+        # interpreta como que cambió de opinión y se vuelve a preguntar
+        # por el sitio nuevo, en vez de quedar atascado repitiendo
+        # NO_ENTIENDE para siempre (confirmado en la Pi real: el usuario
+        # repetía el nombre del sitio pensando que así reintentaba).
+        lugar_nuevo = buscar_lugar(texto)
+        if lugar_nuevo is not None:
+            return Resultado(Accion.PREGUNTAR_OPCION, lugar=lugar_nuevo)
+
+        return Resultado(Accion.NO_ENTIENDE)
 
     lugar = buscar_lugar(texto)
     if lugar is not None:
