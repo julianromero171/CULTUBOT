@@ -5,6 +5,7 @@ After=network.target sound.target
 [Service]
 Type=simple
 User=cultubot
+Environment=XDG_RUNTIME_DIR=/run/user/1000
 WorkingDirectory=/home/cultubot/CULTUBOT
 ExecStart=/home/cultubot/CULTUBOT/venv/bin/python3 -u main.py
 Restart=always
