@@ -28,16 +28,14 @@ from core.lugares import LUGARES
 # core/normalizador.py ya las convierte a "cultubot" antes de interpretar.
 PALABRAS_ACTIVACION = ["cultura", "culto"]
 PALABRAS_SALIR = ["salir"]
-PALABRAS_OPCION = [
-    "dibujo",
-    "solo el dibujo",
-    "dibujo con audio",
-    "dibujo y audio",
-    "con audio",
-    "solo audio",
-    "solamente audio",
-    "solo el audio",
-]
+# Palabras clave sueltas, no frases completas: core/comandos.py
+# (_detectar_opcion) solo busca si "dibujo" y/o "audio" aparecen en el
+# texto reconocido, no una frase exacta -- así que la gramática solo
+# necesita esas dos palabras (más "solo"/"con"/"y"/"el"/"solamente"
+# como relleno natural, para que Vosk no fuerce una palabra rara si el
+# usuario las dice). Una gramática más chica también reconoce más
+# rápido y con menos ambigüedad.
+PALABRAS_OPCION = ["dibujo", "audio", "solo", "con", "y", "el", "solamente"]
 
 
 def construir_gramatica() -> str:

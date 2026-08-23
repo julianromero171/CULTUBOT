@@ -71,6 +71,34 @@ def test_confirmando_no_entiende_opcion_invalida():
     assert resultado.accion is Accion.NO_ENTIENDE
 
 
+def test_confirmando_detecta_audio_solo_aunque_venga_fragmentado():
+    # Bug real confirmado en la Pi: Vosk a veces solo reconoce el
+    # fragmento "audio" (o "el audio") en vez de la frase completa
+    # "solo audio" -- una frase completa nunca puede ser substring de
+    # algo mas corto que ella misma, asi que con la logica vieja (buscar
+    # la frase completa) esto SIEMPRE fallaba con NO_ENTIENDE, sin
+    # ninguna forma de confirmar la opcion.
+    maquina = MaquinaEstados()
+    maquina.transicionar(Estado.ESPERANDO_ORDEN)
+    maquina.transicionar(Estado.CONFIRMANDO)
+
+    resultado = interpretar("audio", maquina)
+
+    assert resultado.accion is Accion.CONFIRMAR
+    assert resultado.opcion is Opcion.SOLO_AUDIO
+
+
+def test_confirmando_detecta_el_audio_como_solo_audio():
+    maquina = MaquinaEstados()
+    maquina.transicionar(Estado.ESPERANDO_ORDEN)
+    maquina.transicionar(Estado.CONFIRMANDO)
+
+    resultado = interpretar("el audio", maquina)
+
+    assert resultado.accion is Accion.CONFIRMAR
+    assert resultado.opcion is Opcion.SOLO_AUDIO
+
+
 def test_confirmando_decir_otro_sitio_pregunta_por_el_sitio_nuevo():
     # Bug real confirmado en la Pi: el usuario repetía el nombre del
     # sitio en vez de una opción, pensando que así reintentaba, y se

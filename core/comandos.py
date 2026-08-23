@@ -37,19 +37,6 @@ class Opcion(Enum):
     SOLO_AUDIO = auto()
 
 
-# Frases reconocidas por opción, de más específica a menos específica.
-_FRASES_OPCION: list[tuple[str, Opcion]] = [
-    ("dibujo con audio", Opcion.DIBUJO_CON_AUDIO),
-    ("dibujo y audio", Opcion.DIBUJO_CON_AUDIO),
-    ("con audio", Opcion.DIBUJO_CON_AUDIO),
-    ("solo audio", Opcion.SOLO_AUDIO),
-    ("solamente audio", Opcion.SOLO_AUDIO),
-    ("solo el audio", Opcion.SOLO_AUDIO),
-    ("dibujo", Opcion.DIBUJO),
-    ("solo el dibujo", Opcion.DIBUJO),
-]
-
-
 class Resultado(NamedTuple):
     accion: Accion
     lugar: Optional[Lugar] = None
@@ -57,9 +44,23 @@ class Resultado(NamedTuple):
 
 
 def _detectar_opcion(texto: str) -> Optional[Opcion]:
-    for frase, opcion in _FRASES_OPCION:
-        if frase in texto:
-            return opcion
+    """Busca las palabras clave sueltas "dibujo"/"audio" en vez de una
+    frase completa ("solo audio", "dibujo con audio", etc.) — el
+    reconocimiento de Vosk a veces solo capta un fragmento corto (ej.
+    "audio" solo, o "el audio"), y una frase completa nunca puede ser
+    substring de algo más corto que ella misma: con la lógica anterior
+    (buscar la frase completa) esos fragmentos nunca coincidían con
+    nada y el usuario se quedaba sin poder confirmar ninguna opción,
+    aunque hubiera dicho algo claro. Confirmado en la Pi real.
+    """
+    tiene_dibujo = "dibujo" in texto
+    tiene_audio = "audio" in texto
+    if tiene_dibujo and tiene_audio:
+        return Opcion.DIBUJO_CON_AUDIO
+    if tiene_audio:
+        return Opcion.SOLO_AUDIO
+    if tiene_dibujo:
+        return Opcion.DIBUJO
     return None
 
 
