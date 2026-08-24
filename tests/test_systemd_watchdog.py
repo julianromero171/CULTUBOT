@@ -28,7 +28,7 @@ def test_marcar_progreso_actualiza_la_marca_de_tiempo():
     wd = WatchdogSystemd()
     marca_inicial = wd._ultimo_progreso
 
-    time.sleep(0.01)
+    time.sleep(0.05)  # margen generoso: la resolucion de time.monotonic() en Windows puede ser ~15ms
     wd.marcar_progreso()
 
     assert wd._ultimo_progreso > marca_inicial

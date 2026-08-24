@@ -17,6 +17,7 @@ RUTA_AUDIO = Path("audio")
 BIENVENIDA = RUTA_AUDIO / "bienvenida.wav"
 DESPEDIDA = RUTA_AUDIO / "despedida.wav"
 PREGUNTAR_OPCION = RUTA_AUDIO / "dibujo_con_audio_o_sin_audio.wav"
+NO_ENTIENDE = RUTA_AUDIO / "no_entiende.wav"
 
 # Confirmación de "elegiste tal lugar", una por sitio (clave de core.lugares.LUGARES).
 ELECCION_POR_LUGAR: dict[str, Path] = {

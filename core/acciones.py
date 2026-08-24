@@ -137,6 +137,7 @@ class Ejecutor:
 
     def _no_entiende(self, resultado: Resultado, maquina: MaquinaEstados) -> None:
         self._voz.hablar("Lo siento, no entendí lo que dijiste.")
+        self._audio.reproducir(mensajes.NO_ENTIENDE)
 
     def _ignorar(self, resultado: Resultado, maquina: MaquinaEstados) -> None:
         pass

@@ -163,7 +163,7 @@ def test_salir_reinicia_la_maquina():
 
 
 def test_no_entiende_no_cambia_estado():
-    ejecutor, voz, _, _ = _construir()
+    ejecutor, voz, _, audio = _construir()
     maquina = MaquinaEstados()
     maquina.transicionar(Estado.ESPERANDO_ORDEN)
 
@@ -171,6 +171,7 @@ def test_no_entiende_no_cambia_estado():
 
     assert maquina.estado is Estado.ESPERANDO_ORDEN
     assert any("no entend" in m.lower() for m in voz.mensajes)
+    assert audio.rutas_reproducidas == [str(mensajes.NO_ENTIENDE)]
 
 
 def test_ignorar_no_hace_nada():
