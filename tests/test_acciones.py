@@ -2,7 +2,7 @@ from pathlib import Path
 
 from core import mensajes
 from core.acciones import Ejecutor
-from core.comandos import Accion, Opcion, Resultado
+from core.comandos import Accion, Resultado
 from core.estados import Estado, MaquinaEstados
 from core.lugares import LUGARES
 
@@ -52,102 +52,53 @@ def test_activar_transiciona_a_esperando_orden():
     assert audio.rutas_reproducidas == [str(mensajes.BIENVENIDA)]
 
 
-def test_preguntar_opcion_pasa_a_confirmando_y_guarda_lugar():
-    ejecutor, voz, _, audio = _construir()
+def test_dibujar_hace_todo_de_una_sin_preguntar_opciones():
+    # Flujo simplificado: reconocer el sitio ya dibuja Y narra, sin
+    # preguntar nada -- no hay paso intermedio de CONFIRMANDO esperando
+    # una respuesta del usuario.
+    ejecutor, voz, serial, audio = _construir()
     maquina = MaquinaEstados()
     maquina.transicionar(Estado.ESPERANDO_ORDEN)
     lugar = LUGARES["biblioteca"]
 
-    ejecutor.ejecutar(Resultado(Accion.PREGUNTAR_OPCION, lugar=lugar), maquina)
+    ejecutor.ejecutar(Resultado(Accion.DIBUJAR, lugar=lugar), maquina)
 
-    assert maquina.estado is Estado.CONFIRMANDO
+    assert maquina.estado is Estado.ESPERANDO_ORDEN
     assert maquina.ultimo_lugar is lugar
-    assert any(lugar.nombre in m for m in voz.mensajes)
+    assert serial.rutas_enviadas == [str(lugar.ruta_gcode())]
     assert audio.rutas_reproducidas == [
         str(mensajes.ELECCION_POR_LUGAR[lugar.clave]),
-        str(mensajes.PREGUNTAR_OPCION),
+        str(lugar.ruta_audio()),
     ]
+    assert any(lugar.nombre in m for m in voz.mensajes)
 
 
-def test_preguntar_opcion_sin_audio_de_eleccion_solo_reproduce_la_pregunta(monkeypatch):
+def test_dibujar_sin_audio_de_eleccion_igual_dibuja_y_narra(monkeypatch):
     # Todos los lugares del catálogo tienen audio de elección, pero si en
     # el futuro se agrega uno sin ELECCION_POR_LUGAR, no debe romperse.
-    ejecutor, _, _, audio = _construir()
+    ejecutor, _, serial, audio = _construir()
     maquina = MaquinaEstados()
     maquina.transicionar(Estado.ESPERANDO_ORDEN)
     lugar = LUGARES["biblioteca"]
     monkeypatch.delitem(mensajes.ELECCION_POR_LUGAR, lugar.clave)
 
-    ejecutor.ejecutar(Resultado(Accion.PREGUNTAR_OPCION, lugar=lugar), maquina)
-
-    assert audio.rutas_reproducidas == [str(mensajes.PREGUNTAR_OPCION)]
-
-
-def test_confirmar_dibujo_envia_gcode_y_vuelve_a_esperando_orden():
-    ejecutor, voz, serial, audio = _construir()
-    maquina = MaquinaEstados()
-    maquina.transicionar(Estado.ESPERANDO_ORDEN)
-    lugar = LUGARES["biblioteca"]
-    maquina.establecer_lugar(lugar)
-    maquina.transicionar(Estado.CONFIRMANDO)
-
-    ejecutor.ejecutar(
-        Resultado(Accion.CONFIRMAR, lugar=lugar, opcion=Opcion.DIBUJO), maquina
-    )
-
-    assert serial.rutas_enviadas == [str(lugar.ruta_gcode())]
-    assert audio.rutas_reproducidas == []
-    assert maquina.estado is Estado.ESPERANDO_ORDEN
-
-
-def test_confirmar_dibujo_con_audio_envia_ambos():
-    ejecutor, voz, serial, audio = _construir()
-    maquina = MaquinaEstados()
-    maquina.transicionar(Estado.ESPERANDO_ORDEN)
-    lugar = LUGARES["biblioteca"]
-    maquina.establecer_lugar(lugar)
-    maquina.transicionar(Estado.CONFIRMANDO)
-
-    ejecutor.ejecutar(
-        Resultado(Accion.CONFIRMAR, lugar=lugar, opcion=Opcion.DIBUJO_CON_AUDIO),
-        maquina,
-    )
+    ejecutor.ejecutar(Resultado(Accion.DIBUJAR, lugar=lugar), maquina)
 
     assert serial.rutas_enviadas == [str(lugar.ruta_gcode())]
     assert audio.rutas_reproducidas == [str(lugar.ruta_audio())]
-    assert maquina.estado is Estado.ESPERANDO_ORDEN
 
 
-def test_confirmar_solo_audio_no_toca_el_serial():
-    ejecutor, voz, serial, audio = _construir()
+def test_dibujar_avisa_si_falla_el_envio_de_gcode_pero_igual_narra():
+    ejecutor, voz, serial, audio = _construir(exito_serial=False)
     maquina = MaquinaEstados()
     maquina.transicionar(Estado.ESPERANDO_ORDEN)
     lugar = LUGARES["biblioteca"]
-    maquina.establecer_lugar(lugar)
-    maquina.transicionar(Estado.CONFIRMANDO)
 
-    ejecutor.ejecutar(
-        Resultado(Accion.CONFIRMAR, lugar=lugar, opcion=Opcion.SOLO_AUDIO), maquina
-    )
-
-    assert serial.rutas_enviadas == []
-    assert audio.rutas_reproducidas == [str(lugar.ruta_audio())]
-    assert maquina.estado is Estado.ESPERANDO_ORDEN
-
-
-def test_confirmar_avisa_si_falla_el_envio_de_gcode():
-    ejecutor, voz, serial, _ = _construir(exito_serial=False)
-    maquina = MaquinaEstados()
-    maquina.transicionar(Estado.ESPERANDO_ORDEN)
-    lugar = LUGARES["biblioteca"]
-    maquina.establecer_lugar(lugar)
-    maquina.transicionar(Estado.CONFIRMANDO)
-
-    ejecutor.ejecutar(
-        Resultado(Accion.CONFIRMAR, lugar=lugar, opcion=Opcion.DIBUJO), maquina
-    )
+    ejecutor.ejecutar(Resultado(Accion.DIBUJAR, lugar=lugar), maquina)
 
     assert any("problema" in m.lower() for m in voz.mensajes)
+    # el fallo del gcode no impide que igual se reproduzca la narración
+    assert audio.rutas_reproducidas[-1] == str(lugar.ruta_audio())
 
 
 def test_salir_reinicia_la_maquina():

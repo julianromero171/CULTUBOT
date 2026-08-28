@@ -1,6 +1,6 @@
 """
 Catálogo de audios pregrabados para los mensajes fijos de la conversación
-(bienvenida, confirmación de elección, pregunta de opción, despedida).
+(bienvenida, confirmación de elección, despedida, no entendí).
 
 Mismo mecanismo que las narraciones de core/lugares.py: archivos .wav ya
 grabados, sin TTS. Ejecutor (core/acciones.py) los reproduce además de
@@ -16,7 +16,6 @@ RUTA_AUDIO = Path("audio")
 
 BIENVENIDA = RUTA_AUDIO / "bienvenida.wav"
 DESPEDIDA = RUTA_AUDIO / "despedida.wav"
-PREGUNTAR_OPCION = RUTA_AUDIO / "dibujo_con_audio_o_sin_audio.wav"
 NO_ENTIENDE = RUTA_AUDIO / "no_entiende.wav"
 
 # Confirmación de "elegiste tal lugar", una por sitio (clave de core.lugares.LUGARES).

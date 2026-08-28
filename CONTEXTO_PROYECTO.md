@@ -4,6 +4,41 @@ Este documento resume todo lo decidido y construido hasta ahora, para que
 puedas retomar el proyecto en Claude Code sin perder contexto de la
 conversación anterior.
 
+## Flujo simplificado: sin preguntar opciones (2026-08-27)
+
+**Decisión importante que reemplaza descripciones más abajo en este
+documento:** ya no se pregunta "¿dibujo, dibujo con audio, o solo
+audio?". Ahora, en cuanto se reconoce el nombre de un sitio, el robot
+**dibuja y narra directo**, sin ningún paso intermedio de confirmación.
+Motivo: cada pregunta era un punto más donde el reconocimiento de voz
+podía fallar y dejar la conversación sin avanzar (confirmado varias
+veces en la Pi real) — menos pasos, menos riesgo.
+
+Cambios: `core/comandos.py` — `Accion.DIBUJAR` reemplaza a
+`PREGUNTAR_OPCION`/`CONFIRMAR`; ya no existe `Opcion` ni
+`_detectar_opcion`. `core/acciones.py` — `Ejecutor._dibujar()` hace
+todo en un solo paso (dibuja + narra). `core/vocabulario.py` ya no
+incluye palabras de opción ("dibujo"/"audio"/etc.) en la gramática de
+Vosk, porque ya no se necesitan — gramática más chica, reconocimiento
+más rápido. `core/mensajes.py` ya no tiene `PREGUNTAR_OPCION` (el audio
+`dibujo_con_audio_o_sin_audio.wav` quedó sin usar, se puede borrar de
+`audio/` si se quiere).
+
+El flujo nuevo:
+```
+Usuario: "Cultura" (o "cultubot")
+Robot:   "Hola, ¿en qué puedo ayudarte?"          [DORMIDO -> ESPERANDO_ORDEN]
+
+Usuario: "Dibuja la biblioteca"
+Robot:   "Encontré Biblioteca Pública." -> audio de elección
+Robot:   "Preparando el dibujo..." -> envía gcode por Serial
+Robot:   "Este es Biblioteca Pública." -> reproduce audio/biblioteca.wav
+                                                    [-> CONFIRMANDO -> DIBUJANDO -> NARRANDO -> FINALIZADO -> ESPERANDO_ORDEN]
+
+Usuario: "Salir"
+Robot:   "Hasta luego."                            [-> DORMIDO]
+```
+
 ## Hardware real, mensajes hablados y reconocimiento por alias (2026-08-15)
 
 Con la Raspberry Pi 5 física ya en uso (mic USB y bafle USB conectados),

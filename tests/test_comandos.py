@@ -1,4 +1,4 @@
-from core.comandos import Accion, Opcion, interpretar
+from core.comandos import Accion, interpretar
 from core.estados import Estado, MaquinaEstados
 
 
@@ -20,13 +20,23 @@ def test_ignora_si_esta_dormido_y_no_dice_activacion():
     assert resultado.accion is Accion.IGNORAR
 
 
-def test_reconoce_lugar_estando_activo():
+def test_reconoce_lugar_estando_activo_dibuja_directo():
+    # Flujo simplificado: reconocer el sitio ya dispara Accion.DIBUJAR,
+    # sin pasar por ninguna pregunta de "que opcion quieres".
     maquina = MaquinaEstados()
     maquina.transicionar(Estado.ESPERANDO_ORDEN)
     resultado = interpretar("dibuja la biblioteca", maquina)
-    assert resultado.accion is Accion.PREGUNTAR_OPCION
+    assert resultado.accion is Accion.DIBUJAR
     assert resultado.lugar is not None
     assert resultado.lugar.clave == "biblioteca"
+
+
+def test_reconoce_lugar_por_alias():
+    maquina = MaquinaEstados()
+    maquina.transicionar(Estado.ESPERANDO_ORDEN)
+    resultado = interpretar("quiero ver el cerro", maquina)
+    assert resultado.accion is Accion.DIBUJAR
+    assert resultado.lugar.clave == "cerro de tasajero"
 
 
 def test_no_entiende_si_no_reconoce_lugar():
@@ -34,82 +44,3 @@ def test_no_entiende_si_no_reconoce_lugar():
     maquina.transicionar(Estado.ESPERANDO_ORDEN)
     resultado = interpretar("algo random", maquina)
     assert resultado.accion is Accion.NO_ENTIENDE
-
-
-def test_confirmando_detecta_opcion_dibujo_con_audio_antes_que_dibujo():
-    maquina = MaquinaEstados()
-    maquina.transicionar(Estado.ESPERANDO_ORDEN)
-    maquina.transicionar(Estado.CONFIRMANDO)
-    resultado = interpretar("dibujo con audio", maquina)
-    assert resultado.accion is Accion.CONFIRMAR
-    assert resultado.opcion is Opcion.DIBUJO_CON_AUDIO
-
-
-def test_confirmando_detecta_solo_dibujo():
-    maquina = MaquinaEstados()
-    maquina.transicionar(Estado.ESPERANDO_ORDEN)
-    maquina.transicionar(Estado.CONFIRMANDO)
-    resultado = interpretar("dibujo", maquina)
-    assert resultado.accion is Accion.CONFIRMAR
-    assert resultado.opcion is Opcion.DIBUJO
-
-
-def test_confirmando_detecta_solo_audio():
-    maquina = MaquinaEstados()
-    maquina.transicionar(Estado.ESPERANDO_ORDEN)
-    maquina.transicionar(Estado.CONFIRMANDO)
-    resultado = interpretar("solo audio", maquina)
-    assert resultado.accion is Accion.CONFIRMAR
-    assert resultado.opcion is Opcion.SOLO_AUDIO
-
-
-def test_confirmando_no_entiende_opcion_invalida():
-    maquina = MaquinaEstados()
-    maquina.transicionar(Estado.ESPERANDO_ORDEN)
-    maquina.transicionar(Estado.CONFIRMANDO)
-    resultado = interpretar("no se que quiero", maquina)
-    assert resultado.accion is Accion.NO_ENTIENDE
-
-
-def test_confirmando_detecta_audio_solo_aunque_venga_fragmentado():
-    # Bug real confirmado en la Pi: Vosk a veces solo reconoce el
-    # fragmento "audio" (o "el audio") en vez de la frase completa
-    # "solo audio" -- una frase completa nunca puede ser substring de
-    # algo mas corto que ella misma, asi que con la logica vieja (buscar
-    # la frase completa) esto SIEMPRE fallaba con NO_ENTIENDE, sin
-    # ninguna forma de confirmar la opcion.
-    maquina = MaquinaEstados()
-    maquina.transicionar(Estado.ESPERANDO_ORDEN)
-    maquina.transicionar(Estado.CONFIRMANDO)
-
-    resultado = interpretar("audio", maquina)
-
-    assert resultado.accion is Accion.CONFIRMAR
-    assert resultado.opcion is Opcion.SOLO_AUDIO
-
-
-def test_confirmando_detecta_el_audio_como_solo_audio():
-    maquina = MaquinaEstados()
-    maquina.transicionar(Estado.ESPERANDO_ORDEN)
-    maquina.transicionar(Estado.CONFIRMANDO)
-
-    resultado = interpretar("el audio", maquina)
-
-    assert resultado.accion is Accion.CONFIRMAR
-    assert resultado.opcion is Opcion.SOLO_AUDIO
-
-
-def test_confirmando_decir_otro_sitio_pregunta_por_el_sitio_nuevo():
-    # Bug real confirmado en la Pi: el usuario repetía el nombre del
-    # sitio en vez de una opción, pensando que así reintentaba, y se
-    # quedaba atascado en NO_ENTIENDE para siempre. Ahora se interpreta
-    # como que cambió de opinión.
-    maquina = MaquinaEstados()
-    maquina.transicionar(Estado.ESPERANDO_ORDEN)
-    maquina.transicionar(Estado.CONFIRMANDO)
-
-    resultado = interpretar("templo historico", maquina)
-
-    assert resultado.accion is Accion.PREGUNTAR_OPCION
-    assert resultado.lugar is not None
-    assert resultado.lugar.clave == "templo historico"

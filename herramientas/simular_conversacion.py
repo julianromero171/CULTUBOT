@@ -10,7 +10,8 @@ disponible, o para demos rápidas.
 
 Uso:
     python herramientas/simular_conversacion.py
-    (escribe frases como "cultubot", "dibuja la biblioteca", "dibujo con audio", "salir")
+    (escribe frases como "cultubot", "dibuja la biblioteca", "salir" --
+    al reconocer un sitio dibuja y narra directo, sin preguntar opciones)
 """
 
 from __future__ import annotations

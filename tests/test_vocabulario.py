@@ -30,11 +30,3 @@ def test_gramatica_incluye_activacion_y_salir():
     assert "cultura" in frases
     assert "culto" in frases
     assert "salir" in frases
-
-
-def test_gramatica_incluye_las_palabras_clave_de_opcion():
-    # core/comandos.py (_detectar_opcion) solo busca estas dos palabras
-    # sueltas, no una frase completa -- tienen que estar en la gramática.
-    frases = json.loads(construir_gramatica())
-    assert "dibujo" in frases
-    assert "audio" in frases

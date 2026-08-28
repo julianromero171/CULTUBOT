@@ -28,14 +28,6 @@ from core.lugares import LUGARES
 # core/normalizador.py ya las convierte a "cultubot" antes de interpretar.
 PALABRAS_ACTIVACION = ["cultura", "culto"]
 PALABRAS_SALIR = ["salir"]
-# Palabras clave sueltas, no frases completas: core/comandos.py
-# (_detectar_opcion) solo busca si "dibujo" y/o "audio" aparecen en el
-# texto reconocido, no una frase exacta -- así que la gramática solo
-# necesita esas dos palabras (más "solo"/"con"/"y"/"el"/"solamente"
-# como relleno natural, para que Vosk no fuerce una palabra rara si el
-# usuario las dice). Una gramática más chica también reconoce más
-# rápido y con menos ambigüedad.
-PALABRAS_OPCION = ["dibujo", "audio", "solo", "con", "y", "el", "solamente"]
 
 
 def construir_gramatica() -> str:
@@ -44,8 +36,13 @@ def construir_gramatica() -> str:
     Incluye "[unk]" para que el reconocedor pueda marcar como "desconocido"
     lo que no coincide con ninguna frase, en vez de forzar una coincidencia
     falsa con la palabra permitida más parecida.
+
+    Ya no incluye palabras de "opción" (dibujo/audio/etc.) -- el flujo se
+    simplificó para dibujar y narrar directo apenas se reconoce un sitio,
+    sin preguntar nada (ver core/comandos.py). Una gramática más chica
+    también reconoce más rápido y con menos ambigüedad.
     """
-    frases = set(PALABRAS_ACTIVACION + PALABRAS_SALIR + PALABRAS_OPCION)
+    frases = set(PALABRAS_ACTIVACION + PALABRAS_SALIR)
     for lugar in LUGARES.values():
         frases.update(lugar.frases_reconocidas())
 

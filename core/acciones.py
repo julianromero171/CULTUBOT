@@ -21,7 +21,7 @@ from typing import Protocol
 
 from core import mensajes
 from core.audio import ReproductorAudio
-from core.comandos import Accion, Opcion, Resultado
+from core.comandos import Accion, Resultado
 from core.estados import Estado, MaquinaEstados
 from core.lugares import Lugar
 
@@ -63,8 +63,7 @@ class Ejecutor:
     def ejecutar(self, resultado: Resultado, maquina: MaquinaEstados) -> None:
         manejador = {
             Accion.ACTIVAR: self._activar,
-            Accion.PREGUNTAR_OPCION: self._preguntar_opcion,
-            Accion.CONFIRMAR: self._confirmar,
+            Accion.DIBUJAR: self._dibujar,
             Accion.SALIR: self._salir,
             Accion.NO_ENTIENDE: self._no_entiende,
             Accion.IGNORAR: self._ignorar,
@@ -77,39 +76,22 @@ class Ejecutor:
         self._voz.hablar("Hola, ¿en qué puedo ayudarte?")
         self._audio.reproducir(mensajes.BIENVENIDA)
 
-    def _preguntar_opcion(self, resultado: Resultado, maquina: MaquinaEstados) -> None:
+    def _dibujar(self, resultado: Resultado, maquina: MaquinaEstados) -> None:
+        """Sitio reconocido -> dibuja y narra directo, sin preguntar
+        opciones (ver core/comandos.py para el porqué)."""
         lugar = resultado.lugar
         assert lugar is not None
 
         maquina.establecer_lugar(lugar)
         maquina.transicionar(Estado.CONFIRMANDO)
-        self._voz.hablar(
-            f"Encontré {lugar.nombre}. "
-            "¿Quieres el dibujo, dibujo con audio, o solo audio?"
-        )
+        self._voz.hablar(f"Encontré {lugar.nombre}.")
 
         ruta_eleccion = mensajes.ELECCION_POR_LUGAR.get(lugar.clave)
         if ruta_eleccion is not None:
             self._audio.reproducir(ruta_eleccion)
-        self._audio.reproducir(mensajes.PREGUNTAR_OPCION)
 
-    def _confirmar(self, resultado: Resultado, maquina: MaquinaEstados) -> None:
-        lugar: Lugar | None = maquina.ultimo_lugar
-        if lugar is None or resultado.opcion is None:
-            self._no_entiende(resultado, maquina)
-            return
-
-        if resultado.opcion is Opcion.DIBUJO:
-            self._hacer_dibujo(lugar, maquina)
-
-        elif resultado.opcion is Opcion.DIBUJO_CON_AUDIO:
-            self._hacer_dibujo(lugar, maquina)
-            self._hacer_narracion(lugar, maquina)
-
-        elif resultado.opcion is Opcion.SOLO_AUDIO:
-            maquina.transicionar(Estado.NARRANDO)
-            self._voz.hablar(f"Reproduciendo la narración de {lugar.nombre}.")
-            self._audio.reproducir(lugar.ruta_audio())
+        self._hacer_dibujo(lugar, maquina)
+        self._hacer_narracion(lugar, maquina)
 
         maquina.transicionar(Estado.FINALIZADO)
         maquina.transicionar(Estado.ESPERANDO_ORDEN)
