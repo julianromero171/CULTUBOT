@@ -26,15 +26,17 @@ class ErrorConexionESP32(Exception):
 
 
 def es_linea_util(linea: str) -> bool:
-    """Una línea de gcode es "útil" si no está vacía y no es un comentario
-    (';' o '(' de línea completa). Función libre (no método) para que
-    herramientas como validar_gcode.py puedan reusar el mismo filtro que
-    usa el envío real, sin depender de una conexión serial.
+    """Una línea de gcode es "útil" si no está vacía, no es un comentario
+    (';' o '(' de línea completa), y no es el delimitador de programa '%'
+    (usado por algunos exportadores CNC viejos; FluidNC no lo entiende y
+    lo rechaza con error si se manda tal cual). Función libre (no método)
+    para que herramientas como validar_gcode.py puedan reusar el mismo
+    filtro que usa el envío real, sin depender de una conexión serial.
     """
     linea = linea.strip()
     if not linea:
         return False
-    if linea.startswith(";") or linea.startswith("("):
+    if linea.startswith(";") or linea.startswith("(") or linea == "%":
         return False
     return True
 

@@ -60,6 +60,17 @@ def test_filtra_comentarios_de_gcode(tmp_path):
     assert transporte.escrituras == ["$X\n", "G21\n", "G90\n"]
 
 
+def test_filtra_delimitador_de_programa_porcentaje(tmp_path):
+    # Algunos exportadores CNC viejos envuelven el archivo en '%' al
+    # principio/final -- FluidNC no lo entiende y lo rechazaria con error.
+    ruta = _escribir_gcode(tmp_path, "%\nG21\nG90\nM2\n%\n")
+    transporte = FakeTransporte([b"ok\n", b"ok\n", b"ok\n", b"ok\n"])
+    esp = ESP32Serial(transporte=transporte)
+
+    assert esp.enviar_gcode(ruta) is True
+    assert transporte.escrituras == ["$X\n", "G21\n", "G90\n", "M2\n"]
+
+
 def test_detiene_el_envio_si_la_esp32_responde_error(tmp_path):
     ruta = _escribir_gcode(tmp_path, "G21\nG90\nG0 X999 Y999\n")
     transporte = FakeTransporte([b"ok\n", b"ok\n", b"error:9\n"])
